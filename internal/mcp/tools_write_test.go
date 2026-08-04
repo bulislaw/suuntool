@@ -160,6 +160,96 @@ func TestTool_WorkoutsUpload(t *testing.T) {
 	mustOK(t, res)
 }
 
+func TestTool_GuidesUpload(t *testing.T) {
+	zipBytes := []byte("PK\x03\x04fake-zip-content")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" || r.URL.Path != "/v1/suuntoplus/guides/files" {
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		if ct := r.Header.Get("Content-Type"); ct != "application/zip" {
+			t.Fatalf("content-type: %s", ct)
+		}
+		body, _ := io.ReadAll(r.Body)
+		if string(body) != string(zipBytes) {
+			t.Fatalf("body not sent raw: %q", body)
+		}
+		_, _ = w.Write([]byte(`{"payload":{"id":"g1","name":"Easy 40","owner":"alice","fileModificationTime":1700000000000,"pinned":false},"error":null,"metadata":null}`))
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	res := callTool(t, cs, "guides_upload", map[string]any{
+		"zip_base64": base64.StdEncoding.EncodeToString(zipBytes),
+	})
+	mustOK(t, res)
+	sc := res.StructuredContent.(map[string]any)
+	if sc["id"] != "g1" {
+		t.Fatalf("expected id=g1, got %v", sc["id"])
+	}
+}
+
+func TestTool_GuidesUpload_RejectsMissingBody(t *testing.T) {
+	cs := startTestServer(t, "http://unused/", "", authSession())
+	res := callTool(t, cs, "guides_upload", map[string]any{"zip_base64": ""})
+	if !res.IsError {
+		t.Fatal("expected USAGE error for empty zip_base64")
+	}
+	if got := res.StructuredContent.(map[string]any)["code"]; got != "USAGE" {
+		t.Fatalf("expected code USAGE, got %v", got)
+	}
+}
+
+func TestTool_GuidesUpdate(t *testing.T) {
+	zipBytes := []byte("PK\x03\x04updated-content")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PUT" || r.URL.Path != "/v1/suuntoplus/guides/files/g1" {
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		if string(body) != string(zipBytes) {
+			t.Fatalf("body not sent raw: %q", body)
+		}
+		_, _ = w.Write([]byte(`{"payload":{"id":"g1","name":"Easy 40 v2","owner":"alice","fileModificationTime":1700000200000,"pinned":false},"error":null,"metadata":null}`))
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	res := callTool(t, cs, "guides_update", map[string]any{
+		"id":         "g1",
+		"zip_base64": base64.StdEncoding.EncodeToString(zipBytes),
+	})
+	mustOK(t, res)
+}
+
+func TestTool_GuidesPin(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" || r.URL.Path != "/v1/suuntoplus/guides/items/g1" {
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		var got map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		if got["pinned"] != true {
+			t.Fatalf("body: %+v", got)
+		}
+		_, _ = w.Write([]byte(`{"payload":{"id":"g1","name":"Easy 40","owner":"alice","fileModificationTime":1700000000000,"pinned":true},"error":null,"metadata":null}`))
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	mustOK(t, callTool(t, cs, "guides_pin", map[string]any{"id": "g1"}))
+}
+
+func TestTool_GuidesUnpin(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var got map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		if got["pinned"] != false {
+			t.Fatalf("body: %+v", got)
+		}
+		_, _ = w.Write([]byte(`{"payload":{"id":"g1","name":"Easy 40","owner":"alice","fileModificationTime":1700000000000,"pinned":false},"error":null,"metadata":null}`))
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	mustOK(t, callTool(t, cs, "guides_unpin", map[string]any{"id": "g1"}))
+}
+
 // --- destructive tier ---
 
 func TestTool_WorkoutsDelete(t *testing.T) {
