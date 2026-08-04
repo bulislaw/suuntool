@@ -421,6 +421,23 @@ func readRegistrars() []toolRegistrar {
 			})
 		},
 
+		// guides_priority
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name:        "guides_priority",
+				Description: "Fetch the account's guide priority order (GET /v1/suuntoplus/guides/priority). Returns every guide as {id}, ordered — most recently pinned first.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, _ emptyArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				v, err := endpoints.GuidePriority(ctx, d.client)
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, v, nil
+			})
+		},
+
 		// activity_type_name (unauthed lookup; uses the embedded ActivityType table)
 		registerActivityNameTool,
 	}

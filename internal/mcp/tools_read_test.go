@@ -312,6 +312,24 @@ func TestTool_GuidesDownload(t *testing.T) {
 	}
 }
 
+func TestTool_GuidesPriority(t *testing.T) {
+	srv := newSuuntoStub(t, map[string]string{
+		"/v1/suuntoplus/guides/priority": `{"payload":{"guides":[{"id":"g1"},{"id":"g2"}]},"error":null,"metadata":null}`,
+	})
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	res := callTool(t, cs, "guides_priority", nil)
+	mustOK(t, res)
+	sc := res.StructuredContent.(map[string]any)
+	guides := sc["guides"].([]any)
+	if len(guides) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(guides))
+	}
+	if got := guides[0].(map[string]any)["id"]; got != "g1" {
+		t.Fatalf("expected first id=g1, got %v", got)
+	}
+}
+
 func TestTool_WorkoutsSML(t *testing.T) {
 	srv := newSuuntoStub(t, map[string]string{
 		"/v1/workouts/w1/sml": `{"hello":"sml"}`,
