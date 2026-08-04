@@ -3,6 +3,7 @@ package endpoints_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -57,6 +58,13 @@ func TestListGuides_SurfacesAskoError(t *testing.T) {
 	require.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, "SERVER", apiErr.Code)
 	assert.Equal(t, 5, apiErr.Exit)
+}
+
+func TestGuideList_MarshalsWithLowercaseItemsKey(t *testing.T) {
+	list := endpoints.GuideList{Items: []endpoints.RemoteGuideInfo{{ID: "g1"}}}
+	b, err := json.Marshal(list)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"items":[{"id":"g1","name":"","owner":"","fileModificationTime":0,"pinned":false}]}`, string(b))
 }
 
 func TestGuideList_Table(t *testing.T) {

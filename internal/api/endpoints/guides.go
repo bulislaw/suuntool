@@ -75,7 +75,7 @@ func (g RemoteGuideInfo) Pretty() string {
 // parameters — the mobile client fetches everything in one call — so unlike
 // WorkoutList there is no cursor field here.
 type GuideList struct {
-	Items []RemoteGuideInfo
+	Items []RemoteGuideInfo `json:"items"`
 }
 
 // Table renders the list as headers/rows, so --format tsv works and Pretty
