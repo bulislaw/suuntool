@@ -1,6 +1,7 @@
 package endpoints_test
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -105,6 +106,71 @@ func TestDownloadGuide_NotFound(t *testing.T) {
 	require.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, "NOT_FOUND", apiErr.Code)
 	assert.Equal(t, 6, apiErr.Exit)
+}
+
+func TestCreateGuide_SendsRawZipBodyWithHeaders(t *testing.T) {
+	zipBytes := []byte("PK\x03\x04fake-zip-content")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/v1/suuntoplus/guides/files", r.URL.Path)
+		assert.Equal(t, "application/zip", r.Header.Get("Content-Type"))
+		assert.Equal(t, "5c2fa984-4425-4e72-8f7c-deeaa454b9c6", r.Header.Get("Client-Id"))
+		assert.Equal(t, "SK", r.Header.Get("STTAuthorization"))
+		// No x-totp on guide writes, unlike comments/reactions/edits.
+		assert.Empty(t, r.Header.Get("x-totp"))
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.Equal(t, zipBytes, body, "body must be sent raw, byte-for-byte")
+
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"error":null,"payload":{"id":"g1","name":"Easy 40","owner":"alice","fileModificationTime":1700000000000,"pinned":false}}`))
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	g, err := endpoints.CreateGuide(context.Background(), client, bytes.NewReader(zipBytes))
+	require.NoError(t, err)
+	require.NotNil(t, g)
+	assert.Equal(t, "g1", g.ID)
+}
+
+func TestCreateGuide_DuplicateExternalIdIsExitFive(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusConflict)
+		_, _ = w.Write([]byte(`{"error":{"description":"Conflict"},"payload":null}`))
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	_, err := endpoints.CreateGuide(context.Background(), client, bytes.NewReader([]byte("PK")))
+	require.Error(t, err)
+	var apiErr *api.Error
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, "SERVER", apiErr.Code)
+	assert.Equal(t, 5, apiErr.Exit)
+	assert.Contains(t, apiErr.Message, "Conflict")
+}
+
+func TestUpdateGuide_PutsToGuideIDPath(t *testing.T) {
+	zipBytes := []byte("PK\x03\x04updated-content")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPut, r.Method)
+		assert.Equal(t, "/v1/suuntoplus/guides/files/g1", r.URL.Path)
+		assert.Equal(t, "application/zip", r.Header.Get("Content-Type"))
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.Equal(t, zipBytes, body)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"error":null,"payload":{"id":"g1","name":"Easy 40 v2","owner":"alice","fileModificationTime":1700000200000,"pinned":false}}`))
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	g, err := endpoints.UpdateGuide(context.Background(), client, "g1", bytes.NewReader(zipBytes))
+	require.NoError(t, err)
+	assert.Equal(t, "Easy 40 v2", g.Name)
+	assert.Equal(t, int64(1700000200000), g.FileModificationTime)
 }
 
 func TestGuideList_Pretty_IncludesCount(t *testing.T) {

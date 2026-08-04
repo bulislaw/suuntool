@@ -121,6 +121,56 @@ func ListGuides(ctx context.Context, c *api.Client) (*GuideList, error) {
 	return &GuideList{Items: items}, nil
 }
 
+// guideClientID is a static, app-wide header value required on guide writes.
+// Extracted from APK com.stt.android.suunto v6.11.8's Retrofit @Headers
+// annotation on the guides upload/update calls. Not per-account; on a Suunto
+// app major version bump it may need refreshing, same as the signing keys in
+// internal/auth/keys.go.
+const guideClientID = "5c2fa984-4425-4e72-8f7c-deeaa454b9c6"
+
+func guideWriteHeaders() map[string]string {
+	return map[string]string{
+		"Content-Type": "application/zip",
+		"Client-Id":    guideClientID,
+	}
+}
+
+// CreateGuide uploads a new guide archive (POST suuntoplus/guides/files). body
+// is the raw zip bytes — three files, manifest.json + guide.json + icon.png —
+// sent as-is; suuntool does not open or validate it. No x-totp is required
+// here, unlike comments/reactions/edits.
+//
+// A guide.json externalId that collides with an existing guide on the account
+// returns 409, which Do() maps to Code:"SERVER", Exit:5 (there is no
+// dedicated CONFLICT code in this client — see the exit-code table in
+// CLAUDE.md). The server's own "Conflict" description is in the message.
+func CreateGuide(ctx context.Context, c *api.Client, body io.Reader) (*RemoteGuideInfo, error) {
+	b, err := c.Do(ctx, "POST", "suuntoplus/guides/files", body, guideWriteHeaders())
+	if err != nil {
+		return nil, err
+	}
+	g, err := api.DecodeAsko[RemoteGuideInfo](b)
+	if err != nil {
+		return nil, err
+	}
+	return &g, nil
+}
+
+// UpdateGuide replaces an existing guide's content
+// (PUT suuntoplus/guides/files/{id}). Content only — it does not change
+// pinned status or ownership; use SetGuidePinned for that.
+func UpdateGuide(ctx context.Context, c *api.Client, id string, body io.Reader) (*RemoteGuideInfo, error) {
+	b, err := c.Do(ctx, "PUT", "suuntoplus/guides/files/"+id, body, guideWriteHeaders())
+	if err != nil {
+		return nil, err
+	}
+	g, err := api.DecodeAsko[RemoteGuideInfo](b)
+	if err != nil {
+		return nil, err
+	}
+	return &g, nil
+}
+
 // DownloadGuide streams the guide's zip archive
 // (GET suuntoplus/guides/files/{id}). The server reconstitutes the archive
 // from what it has stored rather than echoing the upload byte-for-byte — it
