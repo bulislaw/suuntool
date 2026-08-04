@@ -148,6 +148,24 @@ type RemoteGuidePriorities struct {
 	Guides []RemoteGuidePriorityEntry `json:"guides"`
 }
 
+// Table renders the ordering as rank/id rows. Rank is the 1-based position in
+// the array — the server conveys priority by position, not by an explicit
+// field, so it is derived here rather than read off the wire.
+func (p RemoteGuidePriorities) Table() ([]string, [][]string) {
+	headers := []string{"Rank", "ID"}
+	rows := make([][]string, 0, len(p.Guides))
+	for i, g := range p.Guides {
+		rows = append(rows, []string{fmt.Sprintf("%d", i+1), g.ID})
+	}
+	return headers, rows
+}
+
+func (p RemoteGuidePriorities) Pretty() string {
+	headers, rows := p.Table()
+	footer := fmt.Sprintf("\n%d %s", len(p.Guides), pluralGuide(len(p.Guides)))
+	return renderTable(headers, rows) + footer
+}
+
 // GuidePriority fetches the account's guide priority order
 // (GET suuntoplus/guides/priority). Confirmed live: returns every guide on
 // the account as {id}, ordered — most recently pinned first.

@@ -246,6 +246,27 @@ func TestGuidePriority_DecodesOrderedList(t *testing.T) {
 	assert.Equal(t, "g2", p.Guides[1].ID)
 }
 
+func TestGuidePriorities_Table_DerivesRankFromPosition(t *testing.T) {
+	p := endpoints.RemoteGuidePriorities{Guides: []endpoints.RemoteGuidePriorityEntry{
+		{ID: "g1"}, {ID: "g2"}, {ID: "g3"},
+	}}
+	headers, rows := p.Table()
+	assert.Equal(t, []string{"Rank", "ID"}, headers)
+	require.Len(t, rows, 3)
+	// Rank is positional — the wire format carries no rank field.
+	assert.Equal(t, []string{"1", "g1"}, rows[0])
+	assert.Equal(t, []string{"2", "g2"}, rows[1])
+	assert.Equal(t, []string{"3", "g3"}, rows[2])
+}
+
+func TestGuidePriorities_Pretty_IncludesCount(t *testing.T) {
+	p := endpoints.RemoteGuidePriorities{Guides: []endpoints.RemoteGuidePriorityEntry{{ID: "g1"}}}
+	pretty := p.Pretty()
+	assert.Contains(t, pretty, "Rank")
+	assert.Contains(t, pretty, "g1")
+	assert.Contains(t, pretty, "1 guide")
+}
+
 func TestGuideList_Pretty_IncludesCount(t *testing.T) {
 	list := endpoints.GuideList{Items: []endpoints.RemoteGuideInfo{
 		{ID: "g1", Name: "Easy 40", FileModificationTime: 1700000000000},
