@@ -293,6 +293,23 @@ func TestTool_WorkoutsUnreact(t *testing.T) {
 	mustOK(t, callTool(t, cs, "workouts_unreact", map[string]any{"key": "w1"}))
 }
 
+func TestTool_GuidesDelete(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" || r.URL.Path != "/v1/suuntoplus/guides/files/g1" {
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	res := callTool(t, cs, "guides_delete", map[string]any{"id": "g1"})
+	mustOK(t, res)
+	sc := res.StructuredContent.(map[string]any)
+	if sc["ok"] != true || sc["id"] != "g1" {
+		t.Fatalf("payload: %+v", sc)
+	}
+}
+
 // TestDestructive_Gating verifies that when allowDestructive=false the
 // destructive tools are NOT advertised, but the write tools still are.
 func TestDestructive_Gating(t *testing.T) {
@@ -313,7 +330,7 @@ func TestDestructive_Gating(t *testing.T) {
 	if !names["workouts_comment"] {
 		t.Error("expected workouts_comment (write) to be listed")
 	}
-	for _, n := range []string{"workouts_delete", "workouts_uncomment", "workouts_unreact"} {
+	for _, n := range []string{"workouts_delete", "workouts_uncomment", "workouts_unreact", "guides_delete"} {
 		if names[n] {
 			t.Errorf("destructive tool %q must NOT be listed when allowDestructive=false", n)
 		}
