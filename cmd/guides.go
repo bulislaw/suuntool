@@ -153,7 +153,77 @@ Content only -- this does not change pinned status.`,
 	},
 }
 
+var guidesPinCmd = &cobra.Command{
+	Use:   "pin <id>",
+	Short: "Pin a guide",
+	Long: `Pin a guide (PATCH suuntoplus/guides/items/{id}). This is the only way to
+change pinned status -- 'guides update' content-only PUT does not touch it.
+
+Not yet exercised against a live account.`,
+	Args:    cobra.ExactArgs(1),
+	Example: `  suuntool guides pin g1`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, _, err := authedClient()
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
+		defer cancel()
+		g, err := endpoints.SetGuidePinned(ctx, c, args[0], true)
+		if err != nil {
+			return err
+		}
+		return emit(g)
+	},
+}
+
+var guidesUnpinCmd = &cobra.Command{
+	Use:   "unpin <id>",
+	Short: "Unpin a guide",
+	Long: `Unpin a guide (PATCH suuntoplus/guides/items/{id}).
+
+Not yet exercised against a live account.`,
+	Args:    cobra.ExactArgs(1),
+	Example: `  suuntool guides unpin g1`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, _, err := authedClient()
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
+		defer cancel()
+		g, err := endpoints.SetGuidePinned(ctx, c, args[0], false)
+		if err != nil {
+			return err
+		}
+		return emit(g)
+	},
+}
+
+var guidesPriorityCmd = &cobra.Command{
+	Use:   "priority",
+	Short: "Show the account's guide priority order",
+	Long: `Fetch the account's guide priority order (GET suuntoplus/guides/priority).
+
+Not yet exercised against a live account.`,
+	Example: `  suuntool guides priority`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, _, err := authedClient()
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
+		defer cancel()
+		p, err := endpoints.GuidePriority(ctx, c)
+		if err != nil {
+			return err
+		}
+		return emit(p)
+	},
+}
+
 func init() {
-	guidesCmd.AddCommand(guidesListCmd, guidesDownloadCmd, guidesUploadCmd, guidesUpdateCmd)
+	guidesCmd.AddCommand(guidesListCmd, guidesDownloadCmd, guidesUploadCmd, guidesUpdateCmd,
+		guidesPinCmd, guidesUnpinCmd, guidesPriorityCmd)
 	rootCmd.AddCommand(guidesCmd)
 }
