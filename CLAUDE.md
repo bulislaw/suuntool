@@ -46,7 +46,7 @@ internal/
 └── mcp/                 Model Context Protocol adapter (stdio server)
     ├── server.go        Run(ctx, Opts), registerAll, deps (api.Client + session)
     ├── registry.go      tier + toolRegistrar shape; per-tool registrars elsewhere
-    ├── tools_read.go    read-tier registrars (whoami, profile_*, workouts_*, wellness_*, doctor, activity_type_name, guides_list, guides_download)
+    ├── tools_read.go    read-tier registrars (whoami, profile_*, workouts_*, wellness_*, doctor, activity_type_name, guides_list, guides_download, guides_priority)
     ├── tools_write.go   --allow-write registrars (comment, react, edit, batch_update, share, extensions, upload, guides_upload, guides_update, guides_pin, guides_unpin)
     ├── tools_destructive.go  --allow-destructive registrars (delete, uncomment, unreact, guides_delete)
     ├── activity.go      activityId → activityName enrichment shared by workouts_list/get/stats

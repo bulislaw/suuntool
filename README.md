@@ -141,7 +141,7 @@ suuntool mcp --allow-write --allow-destructive    # + delete/uncomment/unreact, 
 
 | Tier | Flag | Tools |
 |------|------|-------|
-| read (default) | none | `whoami`, `profile_settings`/`follow`/`user`, `workouts_list`/`get`/`count`/`stats`/`sml`/`fit`/`comments`, `wellness_sleep`/`activity`/`recovery`/`sleepstages`, `activity_type_name`, `doctor`, `guides_list`/`download` |
+| read (default) | none | `whoami`, `profile_settings`/`follow`/`user`, `workouts_list`/`get`/`count`/`stats`/`sml`/`fit`/`comments`, `wellness_sleep`/`activity`/`recovery`/`sleepstages`, `activity_type_name`, `doctor`, `guides_list`/`download`/`priority` |
 | write | `--allow-write` | `workouts_comment`/`react`/`edit`/`batch_update`/`share`/`extensions`/`upload`, `guides_upload`/`update`/`pin`/`unpin` (file bodies via base64) |
 | destructive | `--allow-destructive` (requires `--allow-write`) | `workouts_delete`/`uncomment`/`unreact`, `guides_delete` |
 
