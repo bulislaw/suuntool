@@ -222,8 +222,54 @@ Not yet exercised against a live account.`,
 	},
 }
 
+// guides delete <id>
+var flagGuidesDeleteYes bool
+
+var guidesDeleteCmd = &cobra.Command{
+	Use:   "delete <id>",
+	Short: "Permanently delete a guide (destructive)",
+	Long: `Permanently delete a guide. THIS CANNOT BE UNDONE.
+
+By default, asks for interactive confirmation on a TTY. In non-TTY contexts
+(scripts, agents, CI) you MUST pass --yes; otherwise the command exits with
+code 2 (USAGE) without making any HTTP call.
+
+Server endpoint: DELETE /v1/suuntoplus/guides/files/{id}.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id := args[0]
+		ok, err := confirm("Really delete guide "+id+"? This cannot be undone.", flagGuidesDeleteYes)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			if !flagQuiet {
+				fmt.Fprintln(os.Stderr, "Aborted.")
+			}
+			return nil
+		}
+		c, _, err := authedClient()
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
+		defer cancel()
+		if err := endpoints.DeleteGuide(ctx, c, id); err != nil {
+			return err
+		}
+		if !flagQuiet {
+			fmt.Fprintln(os.Stderr, "Deleted guide", id)
+		}
+		return nil
+	},
+	Example: `  suuntool guides delete g1          # interactive prompt on TTY
+  suuntool guides delete g1 --yes    # non-interactive (scripts/agents)`,
+}
+
 func init() {
+	guidesDeleteCmd.Flags().BoolVar(&flagGuidesDeleteYes, "yes", false, "Skip the confirmation prompt (required for non-TTY)")
+
 	guidesCmd.AddCommand(guidesListCmd, guidesDownloadCmd, guidesUploadCmd, guidesUpdateCmd,
-		guidesPinCmd, guidesUnpinCmd, guidesPriorityCmd)
+		guidesPinCmd, guidesUnpinCmd, guidesPriorityCmd, guidesDeleteCmd)
 	rootCmd.AddCommand(guidesCmd)
 }

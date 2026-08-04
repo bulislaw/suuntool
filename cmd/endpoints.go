@@ -48,6 +48,7 @@ var endpointTable = []endpointRow{
 	{"guides pin <id>", "PATCH", "/v1/suuntoplus/guides/items/{id}", true},
 	{"guides unpin <id>", "PATCH", "/v1/suuntoplus/guides/items/{id}", true},
 	{"guides priority", "GET", "/v1/suuntoplus/guides/priority", true},
+	{"guides delete <id>", "DELETE", "/v1/suuntoplus/guides/files/{id}", true},
 }
 
 var endpointsCmd = &cobra.Command{
