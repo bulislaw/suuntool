@@ -200,6 +200,44 @@ func TestDeleteGuide_NotFound(t *testing.T) {
 	assert.Equal(t, "NOT_FOUND", apiErr.Code)
 }
 
+func TestSetGuidePinned_SendsPatchWithIdAndPinned(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPatch, r.Method)
+		assert.Equal(t, "/v1/suuntoplus/guides/items/g1", r.URL.Path)
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"id":"g1","pinned":true}`, string(body))
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"error":null,"payload":{"id":"g1","name":"Easy 40","owner":"alice","fileModificationTime":1700000000000,"pinned":true}}`))
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	g, err := endpoints.SetGuidePinned(context.Background(), client, "g1", true)
+	require.NoError(t, err)
+	assert.True(t, g.Pinned)
+}
+
+func TestGuidePriority_DecodesOrderedList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/v1/suuntoplus/guides/priority", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"error":null,"payload":{"guides":[{"id":"g1"},{"id":"g2"}]}}`))
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	p, err := endpoints.GuidePriority(context.Background(), client)
+	require.NoError(t, err)
+	require.Len(t, p.Guides, 2)
+	assert.Equal(t, "g1", p.Guides[0].ID)
+	assert.Equal(t, "g2", p.Guides[1].ID)
+}
+
 func TestGuideList_Pretty_IncludesCount(t *testing.T) {
 	list := endpoints.GuideList{Items: []endpoints.RemoteGuideInfo{
 		{ID: "g1", Name: "Easy 40", FileModificationTime: 1700000000000},

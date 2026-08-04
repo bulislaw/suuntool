@@ -8,7 +8,9 @@
 package endpoints
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -105,6 +107,64 @@ func pluralGuide(n int) string {
 		return "guide"
 	}
 	return "guides"
+}
+
+// UpdatePinnedStatusBody is the request body for SetGuidePinned. id
+// duplicates the path parameter — that's the real wire shape, mirrored
+// faithfully rather than simplified.
+type UpdatePinnedStatusBody struct {
+	ID     string `json:"id"`
+	Pinned bool   `json:"pinned"`
+}
+
+// SetGuidePinned pins or unpins a guide (PATCH suuntoplus/guides/items/{id}).
+// This is the only way to change pinned status — UpdateGuide's content PUT
+// does not touch it.
+//
+// Not yet exercised against a live account. Confirm behavior before relying
+// on it in production.
+func SetGuidePinned(ctx context.Context, c *api.Client, id string, pinned bool) (*RemoteGuideInfo, error) {
+	body, err := json.Marshal(UpdatePinnedStatusBody{ID: id, Pinned: pinned})
+	if err != nil {
+		return nil, &api.Error{Code: "USAGE", Message: err.Error(), Exit: 2}
+	}
+	b, err := c.Do(ctx, "PATCH", "suuntoplus/guides/items/"+id, bytes.NewReader(body),
+		map[string]string{"Content-Type": "application/json"})
+	if err != nil {
+		return nil, err
+	}
+	g, err := api.DecodeAsko[RemoteGuideInfo](b)
+	if err != nil {
+		return nil, err
+	}
+	return &g, nil
+}
+
+// RemoteGuidePriorityEntry is one entry in the account's guide priority order.
+type RemoteGuidePriorityEntry struct {
+	ID string `json:"id"`
+}
+
+// RemoteGuidePriorities is the priority ordering of the account's guides.
+type RemoteGuidePriorities struct {
+	Guides []RemoteGuidePriorityEntry `json:"guides"`
+}
+
+// GuidePriority fetches the account's guide priority order
+// (GET suuntoplus/guides/priority).
+//
+// Not yet exercised against a live account. Confirm behavior before relying
+// on it in production.
+func GuidePriority(ctx context.Context, c *api.Client) (*RemoteGuidePriorities, error) {
+	b, err := c.Do(ctx, "GET", "suuntoplus/guides/priority", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	p, err := api.DecodeAsko[RemoteGuidePriorities](b)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
 }
 
 // DeleteGuide permanently removes a guide
