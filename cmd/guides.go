@@ -14,7 +14,7 @@ import (
 
 var guidesCmd = &cobra.Command{
 	Use:   "guides",
-	Short: "SuuntoPlus Guide commands (list, download)",
+	Short: "SuuntoPlus Guide commands (list, download, upload, update, pin, unpin, priority, delete)",
 	Long: `Structured-workout guide commands.
 
 suuntool moves guide archives -- zip files containing manifest.json,
