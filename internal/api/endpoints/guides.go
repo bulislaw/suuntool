@@ -107,6 +107,13 @@ func pluralGuide(n int) string {
 	return "guides"
 }
 
+// DeleteGuide permanently removes a guide
+// (DELETE suuntoplus/guides/files/{id}). Cannot be undone.
+func DeleteGuide(ctx context.Context, c *api.Client, id string) error {
+	_, err := c.Do(ctx, "DELETE", "suuntoplus/guides/files/"+id, nil, nil)
+	return err
+}
+
 // ListGuides fetches every guide on the account (GET suuntoplus/guides/items).
 // No offset/limit/since — the server accepts none for this endpoint.
 func ListGuides(ctx context.Context, c *api.Client) (*GuideList, error) {

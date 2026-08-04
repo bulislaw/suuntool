@@ -173,6 +173,33 @@ func TestUpdateGuide_PutsToGuideIDPath(t *testing.T) {
 	assert.Equal(t, int64(1700000200000), g.FileModificationTime)
 }
 
+func TestDeleteGuide_SendsDeleteToGuideIDPath(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodDelete, r.Method)
+		assert.Equal(t, "/v1/suuntoplus/guides/files/g1", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	err := endpoints.DeleteGuide(context.Background(), client, "g1")
+	require.NoError(t, err)
+}
+
+func TestDeleteGuide_NotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	err := endpoints.DeleteGuide(context.Background(), client, "missing")
+	require.Error(t, err)
+	var apiErr *api.Error
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, "NOT_FOUND", apiErr.Code)
+}
+
 func TestGuideList_Pretty_IncludesCount(t *testing.T) {
 	list := endpoints.GuideList{Items: []endpoints.RemoteGuideInfo{
 		{ID: "g1", Name: "Easy 40", FileModificationTime: 1700000000000},
