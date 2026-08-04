@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/tajchert/suuntool/internal/api"
 	"github.com/tajchert/suuntool/internal/api/endpoints"
 	"github.com/tajchert/suuntool/internal/output"
 )
@@ -82,7 +85,75 @@ archive, not identical bytes.`,
 	},
 }
 
+var guidesUploadCmd = &cobra.Command{
+	Use:   "upload <zip>",
+	Short: "Upload a new guide archive",
+	Long: `Upload a new guide archive (POST suuntoplus/guides/files). zip must be a
+path to a zip file containing manifest.json, guide.json and icon.png;
+suuntool sends it as-is and does not open or validate it.
+
+A guide.json externalId that collides with an existing guide on the account
+returns exit 5 (server) with the server's own "Conflict" description in the
+error message -- there is no dedicated conflict exit code.`,
+	Args: cobra.ExactArgs(1),
+	Example: `  suuntool guides upload ./workout.zip
+  suuntool guides upload ./workout.zip --format json`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, _, err := authedClient()
+		if err != nil {
+			return err
+		}
+		f, err := os.Open(args[0])
+		if err != nil {
+			return &api.Error{Code: "USAGE", Message: err.Error(), Exit: ExitUsage}
+		}
+		defer f.Close()
+
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
+		defer cancel()
+		g, err := endpoints.CreateGuide(ctx, c, f)
+		if err != nil {
+			return err
+		}
+		if !flagQuiet {
+			fmt.Fprintf(os.Stderr, "Created guide id=%s\n", g.ID)
+		}
+		return emit(g)
+	},
+}
+
+var guidesUpdateCmd = &cobra.Command{
+	Use:   "update <id> <zip>",
+	Short: "Replace an existing guide's content",
+	Long: `Replace an existing guide's content (PUT suuntoplus/guides/files/{id}).
+Content only -- this does not change pinned status.`,
+	Args: cobra.ExactArgs(2),
+	Example: `  suuntool guides update g1 ./workout-v2.zip`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, _, err := authedClient()
+		if err != nil {
+			return err
+		}
+		f, err := os.Open(args[1])
+		if err != nil {
+			return &api.Error{Code: "USAGE", Message: err.Error(), Exit: ExitUsage}
+		}
+		defer f.Close()
+
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
+		defer cancel()
+		g, err := endpoints.UpdateGuide(ctx, c, args[0], f)
+		if err != nil {
+			return err
+		}
+		if !flagQuiet {
+			fmt.Fprintf(os.Stderr, "Updated guide id=%s\n", g.ID)
+		}
+		return emit(g)
+	},
+}
+
 func init() {
-	guidesCmd.AddCommand(guidesListCmd, guidesDownloadCmd)
+	guidesCmd.AddCommand(guidesListCmd, guidesDownloadCmd, guidesUploadCmd, guidesUpdateCmd)
 	rootCmd.AddCommand(guidesCmd)
 }
