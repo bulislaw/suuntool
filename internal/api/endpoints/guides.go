@@ -10,6 +10,7 @@ package endpoints
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/tajchert/suuntool/internal/api"
@@ -118,4 +119,14 @@ func ListGuides(ctx context.Context, c *api.Client) (*GuideList, error) {
 		return nil, err
 	}
 	return &GuideList{Items: items}, nil
+}
+
+// DownloadGuide streams the guide's zip archive
+// (GET suuntoplus/guides/files/{id}). The server reconstitutes the archive
+// from what it has stored rather than echoing the upload byte-for-byte — it
+// comes back with manifest.json dropped and JSON numbers renormalized to
+// floats — so treat this as "an equivalent archive", not "the same bytes you
+// sent". Caller MUST Close.
+func DownloadGuide(ctx context.Context, c *api.Client, id string) (io.ReadCloser, error) {
+	return c.DoStream(ctx, "GET", "suuntoplus/guides/files/"+id, nil, nil)
 }

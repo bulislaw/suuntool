@@ -2,6 +2,7 @@ package endpoints_test
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -69,6 +70,41 @@ func TestGuideList_Table(t *testing.T) {
 	assert.Equal(t, "g1", rows[0][4])
 	assert.Equal(t, "true", rows[1][2])
 	assert.Equal(t, "2026-08-03", rows[1][3])
+}
+
+func TestDownloadGuide_StreamsRawZipBytes(t *testing.T) {
+	zipBytes := []byte("PK\x03\x04fake-zip-content-not-gzip")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/v1/suuntoplus/guides/files/g1", r.URL.Path)
+		w.Header().Set("Content-Type", "application/zip")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(zipBytes)
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	rc, err := endpoints.DownloadGuide(context.Background(), client, "g1")
+	require.NoError(t, err)
+	defer rc.Close()
+
+	got, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	assert.Equal(t, zipBytes, got)
+}
+
+func TestDownloadGuide_NotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	client := api.NewClient(srv.URL+"/v1/", "SK", 0)
+	_, err := endpoints.DownloadGuide(context.Background(), client, "missing")
+	require.Error(t, err)
+	var apiErr *api.Error
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, "NOT_FOUND", apiErr.Code)
+	assert.Equal(t, 6, apiErr.Exit)
 }
 
 func TestGuideList_Pretty_IncludesCount(t *testing.T) {
