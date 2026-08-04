@@ -146,8 +146,7 @@ suuntool mcp --allow-write --allow-destructive    # + delete/uncomment/unreact/g
 | destructive | `--allow-destructive` (requires `--allow-write`) | `workouts_delete`/`uncomment`/`unreact`, `guides_delete` |
 
 Guide tools are transport only, same as the CLI: they move the zip archive as
-opaque bytes and don't parse or build `guide.json` content. `guides_pin` and
-`guides_unpin` have not been exercised against a live account.
+opaque bytes and don't parse or build `guide.json` content.
 
 `login`/`logout` are intentionally **not** exposed. Workout responses are enriched with `activityName` next to the numeric `activityId` so the LLM doesn't need a second lookup. Wellness NDJSON streams are buffered into `{items: [...]}` arrays with an optional `limit` — keep windows short for long histories.
 

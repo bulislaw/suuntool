@@ -119,10 +119,8 @@ type UpdatePinnedStatusBody struct {
 
 // SetGuidePinned pins or unpins a guide (PATCH suuntoplus/guides/items/{id}).
 // This is the only way to change pinned status — UpdateGuide's content PUT
-// does not touch it.
-//
-// Not yet exercised against a live account. Confirm behavior before relying
-// on it in production.
+// does not touch it. Confirmed live: pinning sets `pinned` in the response
+// and moves the guide to the front of the account's priority order.
 func SetGuidePinned(ctx context.Context, c *api.Client, id string, pinned bool) (*RemoteGuideInfo, error) {
 	body, err := json.Marshal(UpdatePinnedStatusBody{ID: id, Pinned: pinned})
 	if err != nil {
@@ -151,10 +149,8 @@ type RemoteGuidePriorities struct {
 }
 
 // GuidePriority fetches the account's guide priority order
-// (GET suuntoplus/guides/priority).
-//
-// Not yet exercised against a live account. Confirm behavior before relying
-// on it in production.
+// (GET suuntoplus/guides/priority). Confirmed live: returns every guide on
+// the account as {id}, ordered — most recently pinned first.
 func GuidePriority(ctx context.Context, c *api.Client) (*RemoteGuidePriorities, error) {
 	b, err := c.Do(ctx, "GET", "suuntoplus/guides/priority", nil, nil)
 	if err != nil {

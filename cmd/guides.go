@@ -60,7 +60,7 @@ archive is binary).
 Note: the server reconstitutes the archive from what it has stored rather
 than echoing the original upload byte-for-byte -- expect an equivalent
 archive, not identical bytes.`,
-	Args: cobra.ExactArgs(1),
+	Args:    cobra.ExactArgs(1),
 	Example: `  suuntool guides download g1 -o g1.zip`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, _, err := authedClient()
@@ -127,7 +127,7 @@ var guidesUpdateCmd = &cobra.Command{
 	Short: "Replace an existing guide's content",
 	Long: `Replace an existing guide's content (PUT suuntoplus/guides/files/{id}).
 Content only -- this does not change pinned status.`,
-	Args: cobra.ExactArgs(2),
+	Args:    cobra.ExactArgs(2),
 	Example: `  suuntool guides update g1 ./workout-v2.zip`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, _, err := authedClient()
@@ -157,9 +157,7 @@ var guidesPinCmd = &cobra.Command{
 	Use:   "pin <id>",
 	Short: "Pin a guide",
 	Long: `Pin a guide (PATCH suuntoplus/guides/items/{id}). This is the only way to
-change pinned status -- 'guides update' content-only PUT does not touch it.
-
-Not yet exercised against a live account.`,
+change pinned status -- 'guides update' content-only PUT does not touch it.`,
 	Args:    cobra.ExactArgs(1),
 	Example: `  suuntool guides pin g1`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -178,11 +176,9 @@ Not yet exercised against a live account.`,
 }
 
 var guidesUnpinCmd = &cobra.Command{
-	Use:   "unpin <id>",
-	Short: "Unpin a guide",
-	Long: `Unpin a guide (PATCH suuntoplus/guides/items/{id}).
-
-Not yet exercised against a live account.`,
+	Use:     "unpin <id>",
+	Short:   "Unpin a guide",
+	Long:    `Unpin a guide (PATCH suuntoplus/guides/items/{id}).`,
 	Args:    cobra.ExactArgs(1),
 	Example: `  suuntool guides unpin g1`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -204,8 +200,7 @@ var guidesPriorityCmd = &cobra.Command{
 	Use:   "priority",
 	Short: "Show the account's guide priority order",
 	Long: `Fetch the account's guide priority order (GET suuntoplus/guides/priority).
-
-Not yet exercised against a live account.`,
+Returns every guide on the account as {id}, ordered -- most recently pinned first.`,
 	Example: `  suuntool guides priority`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, _, err := authedClient()

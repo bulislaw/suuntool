@@ -324,9 +324,8 @@ func writeRegistrars() []toolRegistrar {
 		// guides_pin
 		func(s *sdkmcp.Server, d *deps) {
 			sdkmcp.AddTool(s, &sdkmcp.Tool{
-				Name: "guides_pin",
-				Description: "Pin a guide (PATCH /v1/suuntoplus/guides/items/{id}). Requires --allow-write. " +
-					"Not yet exercised against a live account.",
+				Name:        "guides_pin",
+				Description: "Pin a guide (PATCH /v1/suuntoplus/guides/items/{id}). Requires --allow-write.",
 			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, a guidesPinArgs) (*sdkmcp.CallToolResult, any, error) {
 				if e := authGate(d); e != nil {
 					return e, nil, nil
@@ -342,9 +341,8 @@ func writeRegistrars() []toolRegistrar {
 		// guides_unpin
 		func(s *sdkmcp.Server, d *deps) {
 			sdkmcp.AddTool(s, &sdkmcp.Tool{
-				Name: "guides_unpin",
-				Description: "Unpin a guide (PATCH /v1/suuntoplus/guides/items/{id}). Requires --allow-write. " +
-					"Not yet exercised against a live account.",
+				Name:        "guides_unpin",
+				Description: "Unpin a guide (PATCH /v1/suuntoplus/guides/items/{id}). Requires --allow-write.",
 			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, a guidesUnpinArgs) (*sdkmcp.CallToolResult, any, error) {
 				if e := authGate(d); e != nil {
 					return e, nil, nil
