@@ -344,14 +344,16 @@ Guides are the structured-workout archives the watch follows. suuntool moves the
 |---------|----------|------|-------|
 | `guides list` | `GET /v1/suuntoplus/guides/items` | yes | Every guide on the account. **No pagination** — the server accepts no `--since`/`--limit`/`--offset` here, unlike `workouts list` |
 | `guides download <id>` | `GET /v1/suuntoplus/guides/files/{id}` | yes | Zip archive. Raw passthrough — use `-o`. The server reconstitutes the archive rather than echoing the upload byte-for-byte |
-| `guides upload <zip>` | `POST /v1/suuntoplus/guides/files` | yes | Raw `application/zip` body (**not** multipart). A `guide.json` `externalId` that collides with an existing guide returns exit 5 with the server's own `Conflict` description |
-| `guides update <id> <zip>` | `PUT /v1/suuntoplus/guides/files/{id}` | yes | Content only — does **not** change pinned status |
+| `guides upload <zip>` | `POST /v1/suuntoplus/guides/files` | yes | Raw `application/zip` body (**not** multipart). A `guide.json` `externalId` that collides with an existing guide returns exit 5 with the server's own `Conflict` description. The response's `owner` always comes back `"Suunto"` regardless of what the manifest sent — see callout below |
+| `guides update <id> <zip>` | `PUT /v1/suuntoplus/guides/files/{id}` | yes | Content only — does **not** change pinned status or `owner`; the response reflects the owner already stored |
 | `guides pin <id>` | `PATCH /v1/suuntoplus/guides/items/{id}` | yes | The only way to set pinned status; moves the guide to the front of the priority order |
 | `guides unpin <id>` | `PATCH /v1/suuntoplus/guides/items/{id}` | yes | Clears pinned status |
 | `guides priority` | `GET /v1/suuntoplus/guides/priority` | yes | Ordered `{id}` list for the account, most recently pinned first |
 | `guides delete <id>` | `DELETE /v1/suuntoplus/guides/files/{id}` | yes | **Destructive.** TTY confirmation prompt; pass `--yes` in scripts/agents, same as `workouts delete` |
 
 > **No `x-totp` on guide writes.** Unlike `comment` and `react`, none of the guide endpoints require a TOTP header.
+
+> **`owner` asymmetry between create and update.** `guides upload`'s response always reports `owner: "Suunto"`, no matter what the manifest sent; `guides update`'s response reflects the owner actually stored. Confirmed live, not a fluke. Likely explanation (unconfirmed — there's no documentation for this private API to check it against): the server stamps `owner` from the authenticated client's identity on create, and every caller here presents as the same first-party app identity, so it's always `"Suunto"`; update only touches content and leaves the already-stored owner alone. A `guides list` after any write is the way to see what the server actually stored versus what was sent.
 
 ### MCP server
 

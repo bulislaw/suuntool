@@ -225,6 +225,15 @@ func guideWriteHeaders() map[string]string {
 // returns 409, which Do() maps to Code:"SERVER", Exit:5 (there is no
 // dedicated CONFLICT code in this client — see the exit-code table in
 // CLAUDE.md). The server's own "Conflict" description is in the message.
+//
+// The response's owner field comes back "Suunto" regardless of what the
+// manifest sent — confirmed live, not a fluke. UpdateGuide's response, by
+// contrast, reflects the owner actually sent. Likely explanation: the server
+// stamps owner from the authenticated client's identity on create (every
+// caller here presents as the same first-party app identity, so it's always
+// "Suunto"), while update only touches content and leaves the already-stored
+// owner alone. Unconfirmed — this API has no docs to check it against — but
+// it fits the asymmetry.
 func CreateGuide(ctx context.Context, c *api.Client, body io.Reader) (*RemoteGuideInfo, error) {
 	b, err := c.Do(ctx, "POST", "suuntoplus/guides/files", body, guideWriteHeaders())
 	if err != nil {
