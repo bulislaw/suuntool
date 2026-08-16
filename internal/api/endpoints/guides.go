@@ -1,10 +1,14 @@
-// Package endpoints: SuuntoPlus Guides.
+// SuuntoPlus Guides.
 //
 // suuntool is transport-only for guides: it moves the zip archive (three
 // files — manifest.json, guide.json, icon.png) as opaque bytes. It does not
 // parse, build, or validate guide.json content — that's a workout-authoring
 // concern for whatever produces the archive, not for a CLI meant for
 // scripted and agentic API access.
+//
+// NOTE: the blank line below is load-bearing — it keeps this file-scoped note
+// from being adopted as the doc comment for the whole endpoints package.
+
 package endpoints
 
 import (
