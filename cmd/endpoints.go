@@ -41,6 +41,14 @@ var endpointTable = []endpointRow{
 	{"workouts upload", "POST", "/v1/workout", true},
 	{"workouts delete <key>", "DELETE", "/v1/workouts/{key}/delete", true},
 	{"workouts export <key>", "GET", "(bundle: metadata + sml + fit + extensions + comments)", true},
+	{"guides list", "GET", "/v1/suuntoplus/guides/items", true},
+	{"guides download <id>", "GET", "/v1/suuntoplus/guides/files/{id}", true},
+	{"guides upload <zip>", "POST", "/v1/suuntoplus/guides/files", true},
+	{"guides update <id> <zip>", "PUT", "/v1/suuntoplus/guides/files/{id}", true},
+	{"guides pin <id>", "PATCH", "/v1/suuntoplus/guides/items/{id}", true},
+	{"guides unpin <id>", "PATCH", "/v1/suuntoplus/guides/items/{id}", true},
+	{"guides priority", "GET", "/v1/suuntoplus/guides/priority", true},
+	{"guides delete <id>", "DELETE", "/v1/suuntoplus/guides/files/{id}", true},
 }
 
 var endpointsCmd = &cobra.Command{

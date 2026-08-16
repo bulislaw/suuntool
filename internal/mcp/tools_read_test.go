@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -269,6 +270,63 @@ func TestTool_ActivityTypeName(t *testing.T) {
 	sc = res.StructuredContent.(map[string]any)
 	if sc["name"] != "act=9999" {
 		t.Fatalf("expected fallback act=9999, got %v", sc["name"])
+	}
+}
+
+func TestTool_GuidesList(t *testing.T) {
+	srv := newSuuntoStub(t, map[string]string{
+		"/v1/suuntoplus/guides/items": `{"payload":[{"id":"g1","name":"Easy 40","owner":"alice","fileModificationTime":1700000000000,"pinned":false}],"error":null,"metadata":null}`,
+	})
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	res := callTool(t, cs, "guides_list", nil)
+	mustOK(t, res)
+	sc := res.StructuredContent.(map[string]any)
+	items := sc["items"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if got := items[0].(map[string]any)["id"]; got != "g1" {
+		t.Fatalf("expected id=g1, got %v", got)
+	}
+}
+
+func TestTool_GuidesDownload(t *testing.T) {
+	srv := newSuuntoStub(t, map[string]string{
+		"/v1/suuntoplus/guides/files/g1": "PK\x03\x04fake-zip-content",
+	})
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	res := callTool(t, cs, "guides_download", map[string]any{"id": "g1"})
+	mustOK(t, res)
+	sc := res.StructuredContent.(map[string]any)
+	if sc["id"] != "g1" {
+		t.Fatalf("expected id=g1, got %v", sc["id"])
+	}
+	decoded, err := base64.StdEncoding.DecodeString(sc["base64"].(string))
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if string(decoded) != "PK\x03\x04fake-zip-content" {
+		t.Fatalf("unexpected decoded content: %q", decoded)
+	}
+}
+
+func TestTool_GuidesPriority(t *testing.T) {
+	srv := newSuuntoStub(t, map[string]string{
+		"/v1/suuntoplus/guides/priority": `{"payload":{"guides":[{"id":"g1"},{"id":"g2"}]},"error":null,"metadata":null}`,
+	})
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+	res := callTool(t, cs, "guides_priority", nil)
+	mustOK(t, res)
+	sc := res.StructuredContent.(map[string]any)
+	guides := sc["guides"].([]any)
+	if len(guides) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(guides))
+	}
+	if got := guides[0].(map[string]any)["id"]; got != "g1" {
+		t.Fatalf("expected first id=g1, got %v", got)
 	}
 }
 

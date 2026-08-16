@@ -16,6 +16,7 @@ main.go
     ├── root.go          persistent flags, exit codes, helpers (baseURL, authedClient, emit, pickTimeout, parseSince, useTTYColor)
     ├── login.go logout.go whoami.go profile.go doctor.go endpoints.go version.go
     ├── workouts.go      workouts list/get/count/stats/sml/fit/export/comments/react/edit/upload/delete (+ --summary, --stream, --since)
+    ├── guides.go        guides list/download/upload/update/pin/unpin/priority/delete (+ --yes). Transport only — no guide.json parsing.
     ├── wellness.go      wellness sleep/activity/recovery/sleepstages NDJSON streams
     ├── wellness_sleep_pretty.go   TTY-only sleep table renderer (writeSleepFooter)
     ├── mcp.go           `suuntool mcp` stdio MCP server entry (--allow-write / --allow-destructive)
@@ -35,6 +36,7 @@ internal/
 │       ├── user.go      Whoami, Settings, Follow, UserByName + Prettier impls
 │       ├── workouts.go  List/Get/Count/Stats/SML/FIT/Delete + WorkoutList.Summary / SummaryWithWoW
 │       ├── comments.go reactions.go edit.go share.go extensions.go upload.go   workout writes (x-totp via cmd layer)
+│       ├── guides.go    List/Download/Create/Update/Delete/SetGuidePinned/GuidePriority — raw zip body, no x-totp, no guide.json parsing (see the file's own package doc)
 │       ├── wellness.go  NDJSON stream decoders (sleep/activity/recovery/sleepstages)
 │       ├── format.go    formatKm / formatDuration / renderTable(Styled) shared by Pretty()
 ├── session/             session.go — XDG-aware persistence, 0600 perms, ErrNoSession (+ TOTPHeaders helper)
@@ -44,9 +46,9 @@ internal/
 └── mcp/                 Model Context Protocol adapter (stdio server)
     ├── server.go        Run(ctx, Opts), registerAll, deps (api.Client + session)
     ├── registry.go      tier + toolRegistrar shape; per-tool registrars elsewhere
-    ├── tools_read.go    read-tier registrars (whoami, profile_*, workouts_*, wellness_*, doctor, activity_type_name)
-    ├── tools_write.go   --allow-write registrars (comment, react, edit, batch_update, share, extensions, upload)
-    ├── tools_destructive.go  --allow-destructive registrars (delete, uncomment, unreact)
+    ├── tools_read.go    read-tier registrars (whoami, profile_*, workouts_*, wellness_*, doctor, activity_type_name, guides_list, guides_download, guides_priority)
+    ├── tools_write.go   --allow-write registrars (comment, react, edit, batch_update, share, extensions, upload, guides_upload, guides_update, guides_pin, guides_unpin)
+    ├── tools_destructive.go  --allow-destructive registrars (delete, uncomment, unreact, guides_delete)
     ├── activity.go      activityId → activityName enrichment shared by workouts_list/get/stats
     └── errors.go        mapError / mapErrorToCallToolResult (preserves *api.Error structure for the LLM)
 ```

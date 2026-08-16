@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"os"
@@ -59,6 +60,23 @@ type workoutsExtensionsArgs struct {
 type workoutsUploadArgs struct {
 	SMLBase64        string `json:"sml_base64" jsonschema:"base64-encoded .sml file body"`
 	ExtensionsBase64 string `json:"extensions_base64,omitempty" jsonschema:"optional base64-encoded extensions.json"`
+}
+
+type guidesUploadArgs struct {
+	ZipBase64 string `json:"zip_base64" jsonschema:"base64-encoded guide zip archive (manifest.json + guide.json + icon.png)"`
+}
+
+type guidesUpdateArgs struct {
+	ID        string `json:"id" jsonschema:"guide id to update"`
+	ZipBase64 string `json:"zip_base64" jsonschema:"base64-encoded guide zip archive to replace the guide's content with"`
+}
+
+type guidesPinArgs struct {
+	ID string `json:"id" jsonschema:"guide id to pin"`
+}
+
+type guidesUnpinArgs struct {
+	ID string `json:"id" jsonschema:"guide id to unpin"`
 }
 
 // writeRegistrars returns the tierWrite tool registrars.
@@ -244,6 +262,96 @@ func writeRegistrars() []toolRegistrar {
 					return mapErrorToCallToolResult(err), nil, nil
 				}
 				return nil, wkt, nil
+			})
+		},
+
+		// guides_upload — accepts base64, sends straight to CreateGuide as
+		// bytes.Reader. No temp files: unlike workouts_upload's multipart
+		// builder, the guide endpoint takes a raw body, so there's no path
+		// requirement to satisfy.
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name: "guides_upload",
+				Description: "Upload a new guide from a base64-encoded zip archive (POST /v1/suuntoplus/guides/files). " +
+					"suuntool sends the bytes as-is; it does not open or validate the archive. A guide.json externalId " +
+					"that collides with an existing guide returns a server error (exit 5) with the server's own " +
+					"\"Conflict\" description — there is no dedicated conflict code. Requires --allow-write.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, a guidesUploadArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				if a.ZipBase64 == "" {
+					return mapErrorToCallToolResult(&api.Error{Code: "USAGE", Message: "zip_base64 required", Exit: 2}), nil, nil
+				}
+				zipBytes, err := base64.StdEncoding.DecodeString(a.ZipBase64)
+				if err != nil {
+					return mapErrorToCallToolResult(&api.Error{Code: "USAGE", Message: "zip_base64 decode: " + err.Error(), Exit: 2}), nil, nil
+				}
+				v, err := endpoints.CreateGuide(ctx, d.client, bytes.NewReader(zipBytes))
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, v, nil
+			})
+		},
+
+		// guides_update
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name: "guides_update",
+				Description: "Replace an existing guide's content from a base64-encoded zip archive " +
+					"(PUT /v1/suuntoplus/guides/files/{id}). Content only — does not change pinned status; " +
+					"use guides_pin/guides_unpin for that. Requires --allow-write.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, a guidesUpdateArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				if a.ZipBase64 == "" {
+					return mapErrorToCallToolResult(&api.Error{Code: "USAGE", Message: "zip_base64 required", Exit: 2}), nil, nil
+				}
+				zipBytes, err := base64.StdEncoding.DecodeString(a.ZipBase64)
+				if err != nil {
+					return mapErrorToCallToolResult(&api.Error{Code: "USAGE", Message: "zip_base64 decode: " + err.Error(), Exit: 2}), nil, nil
+				}
+				v, err := endpoints.UpdateGuide(ctx, d.client, a.ID, bytes.NewReader(zipBytes))
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, v, nil
+			})
+		},
+
+		// guides_pin
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name:        "guides_pin",
+				Description: "Pin a guide (PATCH /v1/suuntoplus/guides/items/{id}). Requires --allow-write.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, a guidesPinArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				v, err := endpoints.SetGuidePinned(ctx, d.client, a.ID, true)
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, v, nil
+			})
+		},
+
+		// guides_unpin
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name:        "guides_unpin",
+				Description: "Unpin a guide (PATCH /v1/suuntoplus/guides/items/{id}). Requires --allow-write.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, a guidesUnpinArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				v, err := endpoints.SetGuidePinned(ctx, d.client, a.ID, false)
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, v, nil
 			})
 		},
 	}

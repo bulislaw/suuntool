@@ -22,6 +22,10 @@ type workoutsUnreactArgs struct {
 	Key string `json:"key" jsonschema:"workout key to remove the calling user's reaction from"`
 }
 
+type guidesDeleteArgs struct {
+	ID string `json:"id" jsonschema:"guide id to permanently delete"`
+}
+
 // destructiveRegistrars returns the tierDestructive tool registrars.
 func destructiveRegistrars() []toolRegistrar {
 	return []toolRegistrar{
@@ -70,6 +74,22 @@ func destructiveRegistrars() []toolRegistrar {
 					return mapErrorToCallToolResult(err), nil, nil
 				}
 				return nil, map[string]any{"ok": true, "key": a.Key}, nil
+			})
+		},
+
+		// guides_delete
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name:        "guides_delete",
+				Description: "Permanently delete a guide (DELETE /v1/suuntoplus/guides/files/{id}). Cannot be undone. Requires both --allow-write AND --allow-destructive.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, a guidesDeleteArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				if err := endpoints.DeleteGuide(ctx, d.client, a.ID); err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, map[string]any{"ok": true, "id": a.ID}, nil
 			})
 		},
 	}

@@ -23,6 +23,10 @@ type profileUserArgs struct {
 	Username string `json:"username" jsonschema:"the Suunto/Sports-Tracker username to look up"`
 }
 
+type guidesDownloadArgs struct {
+	ID string `json:"id" jsonschema:"the guide id, as returned by guides_list"`
+}
+
 type workoutsListArgs struct {
 	SinceMS int64 `json:"since_ms,omitempty" jsonschema:"workouts modified after this unix-millisecond timestamp (0 = all)"`
 	Limit   int   `json:"limit,omitempty" jsonschema:"page size (default 20, server max 100)"`
@@ -377,6 +381,62 @@ func readRegistrars() []toolRegistrar {
 		makeWellnessTool("wellness_recovery", "List recovery / resources records from Suunto 24/7 wellness (body resources, stress, recovery score over time). Returns newest first by default (order=desc); pass order=asc for chronological. Use limit to cap entries and since_ms to filter by start time.", endpoints.StreamRecovery),
 		// wellness_sleepstages
 		makeWellnessTool("wellness_sleepstages", "List per-night sleep-stage timeline entries from Suunto 24/7 wellness (awake/REM/light/deep transitions). Returns newest first by default (order=desc); pass order=asc for chronological. Use limit to cap entries and since_ms to filter by start time.", endpoints.StreamSleepStages),
+
+		// guides_list
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name:        "guides_list",
+				Description: "List all SuuntoPlus guides on the account (GET /v1/suuntoplus/guides/items). No pagination — the server accepts none for this endpoint.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, _ emptyArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				v, err := endpoints.ListGuides(ctx, d.client)
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, v, nil
+			})
+		},
+
+		// guides_download
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name:        "guides_download",
+				Description: "Download a guide's zip archive base64-encoded (GET /v1/suuntoplus/guides/files/{id}). suuntool does not open or parse the archive — the returned bytes are exactly what the server sent.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, a guidesDownloadArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				rc, err := endpoints.DownloadGuide(ctx, d.client, a.ID)
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				defer rc.Close()
+				b, err := io.ReadAll(rc)
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, map[string]any{"id": a.ID, "base64": base64.StdEncoding.EncodeToString(b)}, nil
+			})
+		},
+
+		// guides_priority
+		func(s *sdkmcp.Server, d *deps) {
+			sdkmcp.AddTool(s, &sdkmcp.Tool{
+				Name:        "guides_priority",
+				Description: "Fetch the account's guide priority order (GET /v1/suuntoplus/guides/priority). Returns every guide as {id}, ordered — most recently pinned first.",
+			}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, _ emptyArgs) (*sdkmcp.CallToolResult, any, error) {
+				if e := authGate(d); e != nil {
+					return e, nil, nil
+				}
+				v, err := endpoints.GuidePriority(ctx, d.client)
+				if err != nil {
+					return mapErrorToCallToolResult(err), nil, nil
+				}
+				return nil, v, nil
+			})
+		},
 
 		// activity_type_name (unauthed lookup; uses the embedded ActivityType table)
 		registerActivityNameTool,

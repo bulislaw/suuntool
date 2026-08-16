@@ -112,6 +112,18 @@ suuntool workouts extensions wk_abc123              # Fitness/Intensity/…
 suuntool workouts upload --sml ./wk.sml             # multipart upload
 suuntool workouts delete wk_abc123 --yes            # destructive — needs --yes off-TTY
 
+# SuuntoPlus Guides — transport only. suuntool moves the zip archive
+# (manifest.json + guide.json + icon.png) as opaque bytes; it does not parse,
+# build, or validate guide.json content.
+suuntool guides list                                # every guide on the account (no pagination)
+suuntool guides download g1 -o g1.zip               # fetch the archive
+suuntool guides upload ./workout.zip                # create a new guide
+suuntool guides update g1 ./workout-v2.zip          # replace content (not pinned status)
+suuntool guides pin g1                               # pin a guide
+suuntool guides unpin g1                             # unpin a guide
+suuntool guides priority                             # account's guide priority order
+suuntool guides delete g1 --yes                      # destructive — needs --yes off-TTY
+
 suuntool doctor                                     # connectivity + session check
 suuntool logout
 ```
@@ -123,15 +135,18 @@ suuntool logout
 ```bash
 suuntool login                                    # one-time; the MCP server cannot prompt for a password
 suuntool mcp                                      # read-only (default)
-suuntool mcp --allow-write                        # + comment/react/edit/batch-update/share/extensions/upload
-suuntool mcp --allow-write --allow-destructive    # + delete/uncomment/unreact
+suuntool mcp --allow-write                        # + comment/react/edit/batch-update/share/extensions/upload, guides upload/update/pin/unpin
+suuntool mcp --allow-write --allow-destructive    # + delete/uncomment/unreact, guides delete
 ```
 
 | Tier | Flag | Tools |
 |------|------|-------|
-| read (default) | none | `whoami`, `profile_settings`/`follow`/`user`, `workouts_list`/`get`/`count`/`stats`/`sml`/`fit`/`comments`, `wellness_sleep`/`activity`/`recovery`/`sleepstages`, `activity_type_name`, `doctor` |
-| write | `--allow-write` | `workouts_comment`/`react`/`edit`/`batch_update`/`share`/`extensions`/`upload` (file bodies via base64) |
-| destructive | `--allow-destructive` (requires `--allow-write`) | `workouts_delete`/`uncomment`/`unreact` |
+| read (default) | none | `whoami`, `profile_settings`/`follow`/`user`, `workouts_list`/`get`/`count`/`stats`/`sml`/`fit`/`comments`, `wellness_sleep`/`activity`/`recovery`/`sleepstages`, `activity_type_name`, `doctor`, `guides_list`/`download`/`priority` |
+| write | `--allow-write` | `workouts_comment`/`react`/`edit`/`batch_update`/`share`/`extensions`/`upload`, `guides_upload`/`update`/`pin`/`unpin` (file bodies via base64) |
+| destructive | `--allow-destructive` (requires `--allow-write`) | `workouts_delete`/`uncomment`/`unreact`, `guides_delete` |
+
+Guide tools are transport only, same as the CLI: they move the zip archive as
+opaque bytes and don't parse or build `guide.json` content.
 
 `login`/`logout` are intentionally **not** exposed. Workout responses are enriched with `activityName` next to the numeric `activityId` so the LLM doesn't need a second lookup. Wellness NDJSON streams are buffered into `{items: [...]}` arrays with an optional `limit` — keep windows short for long histories.
 
@@ -243,8 +258,8 @@ The model should call `workouts_list` with `limit: 3` and return rows with both 
 |------|--------|
 | `--format auto` (default) | Pretty on a TTY, JSON when piped or redirected |
 | `--format json` | Force JSON (2-space indent) |
-| `--format pretty` | Force pretty rendering — aligned tables for list responses (`workouts list`, `workouts stats`, `workouts comments`, `wellness sleep`); key/value blocks for single records |
-| `--format tsv` | Tab-separated values for list responses (`workouts list`, `workouts stats`, `workouts comments`, `workouts list --summary`). Non-tabular responses fall back to JSON. Embedded tabs/newlines in cells are replaced with spaces |
+| `--format pretty` | Force pretty rendering — aligned tables for list responses (`workouts list`, `workouts stats`, `workouts comments`, `wellness sleep`, `guides list`); key/value blocks for single records |
+| `--format tsv` | Tab-separated values for list responses (`workouts list`, `workouts stats`, `workouts comments`, `workouts list --summary`, `guides list`). Non-tabular responses fall back to JSON. Embedded tabs/newlines in cells are replaced with spaces |
 | `-o, --output <path>` | Write to a file instead of stdout — format inferred from extension (`.json`, `.tsv`) |
 | `--fields a,b,c` | Project list/object output to just these JSON keys before render (forces JSON). Skips piping through `jq` for trivial selection |
 | `--no-color` | Disable ANSI styling (also honors `NO_COLOR`) |
@@ -321,6 +336,25 @@ These mutate server state. The `delete` command requires `--yes` in non-TTY cont
 >
 > **Rate limiting.** Suunto's quotas are conservative (a few QPS). Don't batch-spam comments or reactions — your account can be flagged.
 
+### Guides (SuuntoPlus structured workouts) ⚠️
+
+Guides are the structured-workout archives the watch follows. suuntool moves the zip (`manifest.json` + `guide.json` + `icon.png`) as **opaque bytes** — it does not parse, build, or validate `guide.json` content. Authoring a workout is a separate concern from shipping it.
+
+| Command | Endpoint | Auth | Notes |
+|---------|----------|------|-------|
+| `guides list` | `GET /v1/suuntoplus/guides/items` | yes | Every guide on the account. **No pagination** — the server accepts no `--since`/`--limit`/`--offset` here, unlike `workouts list` |
+| `guides download <id>` | `GET /v1/suuntoplus/guides/files/{id}` | yes | Zip archive. Raw passthrough — use `-o`. The server reconstitutes the archive rather than echoing the upload byte-for-byte |
+| `guides upload <zip>` | `POST /v1/suuntoplus/guides/files` | yes | Raw `application/zip` body (**not** multipart). A `guide.json` `externalId` that collides with an existing guide returns exit 5 with the server's own `Conflict` description. The response's `owner` always comes back `"Suunto"` regardless of what the manifest sent — see callout below |
+| `guides update <id> <zip>` | `PUT /v1/suuntoplus/guides/files/{id}` | yes | Content only — does **not** change pinned status or `owner`; the response reflects the owner already stored |
+| `guides pin <id>` | `PATCH /v1/suuntoplus/guides/items/{id}` | yes | The only way to set pinned status; moves the guide to the front of the priority order |
+| `guides unpin <id>` | `PATCH /v1/suuntoplus/guides/items/{id}` | yes | Clears pinned status |
+| `guides priority` | `GET /v1/suuntoplus/guides/priority` | yes | Ordered `{id}` list for the account, most recently pinned first |
+| `guides delete <id>` | `DELETE /v1/suuntoplus/guides/files/{id}` | yes | **Destructive.** TTY confirmation prompt; pass `--yes` in scripts/agents, same as `workouts delete` |
+
+> **No `x-totp` on guide writes.** Unlike `comment` and `react`, none of the guide endpoints require a TOTP header.
+
+> **`owner` asymmetry between create and update.** `guides upload`'s response always reports `owner: "Suunto"`, no matter what the manifest sent; `guides update`'s response reflects the owner actually stored. Confirmed live, not a fluke. Likely explanation (unconfirmed — there's no documentation for this private API to check it against): the server stamps `owner` from the authenticated client's identity on create, and every caller here presents as the same first-party app identity, so it's always `"Suunto"`; update only touches content and leaves the already-stored owner alone. A `guides list` after any write is the way to see what the server actually stored versus what was sent.
+
 ### MCP server
 
 `suuntool mcp` runs an MCP stdio server. See the dedicated [MCP server](#mcp-server) section above for full config snippets for Claude Desktop, Claude Code, and Codex.
@@ -334,7 +368,7 @@ These mutate server state. The `delete` command requires `--yes` in non-TTY cont
 
 Run `suuntool <command> --help` for the full reference of any command. The mapping above is also available as a JSON document via `suuntool endpoints --format json`.
 
-> **Raw passthrough.** `workouts sml`, `workouts fit`, and the four `wellness` subcommands stream their response body straight to stdout (or `-o`) without going through the `--format` pretty-printer. The body is already in its final shape (large JSON / binary `.fit` / NDJSON) and reformatting it would waste memory and lose fidelity.
+> **Raw passthrough.** `workouts sml`, `workouts fit`, `guides download`, and the four `wellness` subcommands stream their response body straight to stdout (or `-o`) without going through the `--format` pretty-printer. The body is already in its final shape (large JSON / binary `.fit` / zip / NDJSON) and reformatting it would waste memory and lose fidelity.
 
 ## Exit codes
 
