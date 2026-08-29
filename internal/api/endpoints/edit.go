@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // EditWorkout sends a partial-update JSON body to /v1/workouts/{key}/attributes.

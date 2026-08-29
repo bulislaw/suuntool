@@ -9,7 +9,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/metrics"
+	"github.com/bulislaw/suuntool/internal/metrics"
 )
 
 // TestServer_ListsDoctorTool spins up Run() against an in-memory transport

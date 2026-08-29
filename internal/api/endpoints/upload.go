@@ -3,7 +3,7 @@ package endpoints
 import (
 	"context"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // UploadWorkout uploads an SML file (and optional extensions JSON) via POST /v1/workout.

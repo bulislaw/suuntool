@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // DefaultExtensionTypes mirrors the set sent by the Android app.

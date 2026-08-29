@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // Comment is one entry returned by /v1/workouts/comments/{key}.

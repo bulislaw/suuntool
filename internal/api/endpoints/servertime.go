@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // ServerTime is the unauthenticated GET /v1/servertime probe used by `doctor`.

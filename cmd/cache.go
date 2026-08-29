@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/tajchert/suuntool/internal/cache"
+	"github.com/bulislaw/suuntool/internal/cache"
 )
 
 var cacheCmd = &cobra.Command{

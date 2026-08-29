@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/tajchert/suuntool/internal/api/endpoints"
-	"github.com/tajchert/suuntool/internal/session"
+	"github.com/bulislaw/suuntool/internal/api/endpoints"
+	"github.com/bulislaw/suuntool/internal/session"
 )
 
 var (

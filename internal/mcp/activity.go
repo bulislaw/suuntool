@@ -5,7 +5,7 @@ import (
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/tajchert/suuntool/internal/api/endpoints"
+	"github.com/bulislaw/suuntool/internal/api/endpoints"
 )
 
 // workoutWithName wraps a RemoteSyncedWorkout with an injected activityName

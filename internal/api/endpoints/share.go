@@ -3,7 +3,7 @@ package endpoints
 import (
 	"context"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // ShareFormat is the GPX share format.

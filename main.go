@@ -1,6 +1,6 @@
 package main
 
-import "github.com/tajchert/suuntool/cmd"
+import "github.com/bulislaw/suuntool/cmd"
 
 func main() {
 	cmd.Execute()

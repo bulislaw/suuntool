@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/metrics"
+	"github.com/bulislaw/suuntool/internal/metrics"
 )
 
 func TestClient_InjectsSessionAndUserAgent(t *testing.T) {

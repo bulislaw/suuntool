@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/tajchert/suuntool/internal/auth"
+	"github.com/bulislaw/suuntool/internal/auth"
 )
 
 var ErrNoSession = errors.New("no saved session")

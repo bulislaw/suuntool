@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // WellnessStream is one of the 4 valid streams.

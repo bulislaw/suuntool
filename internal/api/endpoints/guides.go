@@ -19,7 +19,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // RemoteGuideInfo is a guide's metadata, as returned by list/create/update.

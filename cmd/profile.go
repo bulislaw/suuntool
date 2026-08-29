@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/tajchert/suuntool/internal/api/endpoints"
+	"github.com/bulislaw/suuntool/internal/api/endpoints"
 )
 
 var profileCmd = &cobra.Command{

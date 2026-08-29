@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/api"
-	"github.com/tajchert/suuntool/internal/api/endpoints"
+	"github.com/bulislaw/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api/endpoints"
 )
 
 func TestListGuides_DecodesAskoEnvelope(t *testing.T) {

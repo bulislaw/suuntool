@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/api"
-	"github.com/tajchert/suuntool/internal/api/endpoints"
+	"github.com/bulislaw/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api/endpoints"
 )
 
 func TestListComments_DecodesAndPaths(t *testing.T) {

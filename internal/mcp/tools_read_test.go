@@ -15,9 +15,9 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/api"
-	"github.com/tajchert/suuntool/internal/cache"
-	"github.com/tajchert/suuntool/internal/session"
+	"github.com/bulislaw/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/cache"
+	"github.com/bulislaw/suuntool/internal/session"
 )
 
 // startTestServer builds an MCP server with deps pointing at the given

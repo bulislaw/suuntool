@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/tajchert/suuntool/internal/api"
-	"github.com/tajchert/suuntool/internal/api/endpoints"
-	"github.com/tajchert/suuntool/internal/cache"
-	"github.com/tajchert/suuntool/internal/output"
+	"github.com/bulislaw/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api/endpoints"
+	"github.com/bulislaw/suuntool/internal/cache"
+	"github.com/bulislaw/suuntool/internal/output"
 )
 
 var guidesCmd = &cobra.Command{

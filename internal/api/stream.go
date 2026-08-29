@@ -8,7 +8,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/tajchert/suuntool/internal/metrics"
+	"github.com/bulislaw/suuntool/internal/metrics"
 )
 
 // multiCloser wraps a primary reader and closes both the inner reader (e.g. gzip)

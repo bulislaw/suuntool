@@ -15,9 +15,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/api"
-	"github.com/tajchert/suuntool/internal/api/endpoints"
-	"github.com/tajchert/suuntool/internal/output"
+	"github.com/bulislaw/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api/endpoints"
+	"github.com/bulislaw/suuntool/internal/output"
 )
 
 func TestListWorkouts_DecodesEnvelopeAndCursor(t *testing.T) {

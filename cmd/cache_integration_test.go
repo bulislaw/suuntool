@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/cache"
-	"github.com/tajchert/suuntool/internal/session"
+	"github.com/bulislaw/suuntool/internal/cache"
+	"github.com/bulislaw/suuntool/internal/session"
 )
 
 func TestWorkoutsSML_UsesPersistentCacheAndCountsHit(t *testing.T) {

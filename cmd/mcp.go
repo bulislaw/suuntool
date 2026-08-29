@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/tajchert/suuntool/internal/api"
-	"github.com/tajchert/suuntool/internal/mcp"
+	"github.com/bulislaw/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/mcp"
 )
 
 var (

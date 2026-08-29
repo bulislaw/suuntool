@@ -9,10 +9,10 @@ import (
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/tajchert/suuntool/internal/api"
-	"github.com/tajchert/suuntool/internal/cache"
-	"github.com/tajchert/suuntool/internal/metrics"
-	"github.com/tajchert/suuntool/internal/session"
+	"github.com/bulislaw/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/cache"
+	"github.com/bulislaw/suuntool/internal/metrics"
+	"github.com/bulislaw/suuntool/internal/session"
 )
 
 // Opts configures the MCP server. AllowWrite/AllowDestructive gate which

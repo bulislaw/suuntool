@@ -14,11 +14,11 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/term"
 
-	"github.com/tajchert/suuntool/internal/api"
-	"github.com/tajchert/suuntool/internal/cache"
-	"github.com/tajchert/suuntool/internal/metrics"
-	"github.com/tajchert/suuntool/internal/output"
-	"github.com/tajchert/suuntool/internal/session"
+	"github.com/bulislaw/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/cache"
+	"github.com/bulislaw/suuntool/internal/metrics"
+	"github.com/bulislaw/suuntool/internal/output"
+	"github.com/bulislaw/suuntool/internal/session"
 )
 
 // Exit codes — stable, documented in --help.

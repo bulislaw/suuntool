@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 func TestMCPCommand_DestructiveRequiresWrite(t *testing.T) {

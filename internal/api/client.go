@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tajchert/suuntool/internal/auth"
-	"github.com/tajchert/suuntool/internal/metrics"
+	"github.com/bulislaw/suuntool/internal/auth"
+	"github.com/bulislaw/suuntool/internal/metrics"
 )
 
 const DefaultBaseURL = "https://api.sports-tracker.com/apiserver/v1/"

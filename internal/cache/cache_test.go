@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/metrics"
-	"github.com/tajchert/suuntool/internal/session"
+	"github.com/bulislaw/suuntool/internal/metrics"
+	"github.com/bulislaw/suuntool/internal/session"
 )
 
 func TestCached_RoundTripIsolationAndStatus(t *testing.T) {

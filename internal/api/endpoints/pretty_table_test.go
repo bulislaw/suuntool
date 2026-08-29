@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tajchert/suuntool/internal/api/endpoints"
+	"github.com/bulislaw/suuntool/internal/api/endpoints"
 )
 
 func TestWorkoutList_Pretty_TableShape(t *testing.T) {

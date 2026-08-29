@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tajchert/suuntool/internal/session"
+	"github.com/bulislaw/suuntool/internal/session"
 )
 
 func TestTotpHeaders_ProducesSixDigitToken(t *testing.T) {

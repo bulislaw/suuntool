@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 // LatLon is a latitude/longitude pair as returned by the workout API.

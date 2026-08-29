@@ -5,9 +5,9 @@
 <h1 align="center">suuntool</h1>
 
 <p align="center">
-  <a href="https://golang.org/"><img src="https://img.shields.io/github/go-mod/go-version/tajchert/suuntool?logo=go&logoColor=white" alt="Go version"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/tajchert/suuntool" alt="License"></a>
-  <a href="https://github.com/tajchert/suuntool/releases"><img src="https://img.shields.io/github/v/release/tajchert/suuntool?include_prereleases&sort=semver" alt="Release"></a>
+  <a href="https://golang.org/"><img src="https://img.shields.io/github/go-mod/go-version/bulislaw/suuntool?logo=go&logoColor=white" alt="Go version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/bulislaw/suuntool" alt="License"></a>
+  <a href="https://github.com/bulislaw/suuntool/releases"><img src="https://img.shields.io/github/v/release/bulislaw/suuntool?include_prereleases&sort=semver" alt="Release"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/MCP-ready-7c3aed" alt="MCP ready">
 </p>
@@ -66,7 +66,7 @@ brew install --cask tajchert/tap/suuntool
 Or from source:
 
 ```bash
-go install github.com/tajchert/suuntool@latest
+go install github.com/bulislaw/suuntool@latest
 ```
 
 ## Quickstart

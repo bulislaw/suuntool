@@ -24,7 +24,7 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/tajchert/suuntool/cmd.Version={{ .Version }}
+      - -X github.com/bulislaw/suuntool/cmd.Version={{ .Version }}
 
 archives:
   - id: default
@@ -43,7 +43,7 @@ homebrew_casks:
       - default
     binaries:
       - suuntool
-    homepage: "https://github.com/tajchert/suuntool"
+    homepage: "https://github.com/bulislaw/suuntool"
     description: "Unofficial CLI for the Suunto / Sports-Tracker API"
     license: "MIT"
     repository:
@@ -82,7 +82,7 @@ changelog:
 
 release:
   github:
-    owner: tajchert
+    owner: bulislaw
     name: suuntool
   draft: false
   prerelease: auto
@@ -91,7 +91,7 @@ release:
     ## suuntool v{{ .Version }}
 
     Unofficial Go CLI for the Suunto / Sports-Tracker API.
-    See [README](https://github.com/tajchert/suuntool#readme) for usage and disclaimers.
+    See [README](https://github.com/bulislaw/suuntool#readme) for usage and disclaimers.
 
     > ⚠️ Unofficial, experimental, not affiliated with Suunto. May violate Suunto's TOS — use at your own risk.
   footer: |
@@ -103,5 +103,5 @@ release:
 
     **Install (Go):**
     ```bash
-    go install github.com/tajchert/suuntool@v{{ .Version }}
+    go install github.com/bulislaw/suuntool@v{{ .Version }}
     ```

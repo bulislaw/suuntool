@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tajchert/suuntool/internal/metrics"
-	"github.com/tajchert/suuntool/internal/session"
+	"github.com/bulislaw/suuntool/internal/metrics"
+	"github.com/bulislaw/suuntool/internal/session"
 )
 
 // Kind is a supported immutable downloaded artifact.

@@ -1,4 +1,4 @@
-module github.com/tajchert/suuntool
+module github.com/bulislaw/suuntool
 
 go 1.26.3
 

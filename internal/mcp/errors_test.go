@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tajchert/suuntool/internal/api"
+	"github.com/bulislaw/suuntool/internal/api"
 )
 
 func TestMapError_TypedAPIError(t *testing.T) {
