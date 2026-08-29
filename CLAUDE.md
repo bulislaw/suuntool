@@ -40,6 +40,8 @@ internal/
 │       ├── wellness.go  NDJSON stream decoders (sleep/activity/recovery/sleepstages)
 │       ├── format.go    formatKm / formatDuration / renderTable(Styled) shared by Pretty()
 ├── session/             session.go — XDG-aware persistence, 0600 perms, ErrNoSession (+ TOTPHeaders helper)
+├── cache/               durable per-account raw-download cache (SML/FIT/guide archives only)
+├── metrics/             request-attempt and cache-hit counters propagated by context
 ├── output/              the single render boundary
 │   ├── output.go        Render / RenderToFile, Opts, Prettier interface, resolveFormat
 │   └── tty.go           IsStdoutTTY (respects NO_COLOR)
@@ -70,6 +72,7 @@ Dependency direction is strict: **cmd → api(/endpoints) → auth**, and **cmd 
 - **Never commit private data.** No real emails, usernames, sessionkeys, userKeys, passwords, workout IDs, GPS coordinates, or device serial numbers — not in tests, fixtures, README snippets, commit messages, or sample outputs. Use placeholders: `you@example.com`, `alice`, `SK123`, `k1`, `hunter2`. If you capture a real response for fixture work, scrub it before saving.
 - **Don't commit `handoff/` or `docs/`.** They're local-only by design. Use targeted `git add <files>`; never `git add .` or `git add -A`.
 - **Don't introduce another output path.** No `fmt.Println(json…)` in commands. If `emit` doesn't do what you need, extend `internal/output`, don't bypass it.
+- **Cache only raw immutable downloads.** SML, FIT, and guide archives are the only cacheable responses. Lists, metadata, wellness, profile data, comments, and aggregates must continue to reach the server so cache behavior cannot hide new or changed user data. Cache failures are always best-effort misses.
 - **Don't touch git config.** Email + name are set per-repo already.
 - **Don't add a feature-flag layer or "future-proof" abstraction "just in case".** Add the file when you add the endpoint.
 - **Don't widen `internal/auth`'s public surface** without good reason. Helpers like `keyObfuscator`, `utf8Replace`, `pbkdf2KeyForSalt`, `hotp6` are unexported on purpose — promoting them invites parallel implementations.

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/tajchert/suuntool/internal/metrics"
 )
 
 func TestClient_InjectsSessionAndUserAgent(t *testing.T) {
@@ -25,6 +27,20 @@ func TestClient_InjectsSessionAndUserAgent(t *testing.T) {
 	require.Contains(t, string(body), `"ok":true`)
 	require.Equal(t, "SK123", gotAuth)
 	require.Contains(t, gotUA, "com.stt.android.suunto/")
+}
+
+func TestClient_RecordsRequestAttempt(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	counts := metrics.New()
+	ctx := metrics.WithCounters(context.Background(), counts)
+	c := NewClient(srv.URL+"/", "SK123", time.Second)
+	_, err := c.Do(ctx, "GET", "ping", nil, nil)
+	require.Error(t, err)
+	require.Equal(t, int64(1), counts.Snapshot().ServerRequests)
 }
 
 func TestClient_MapsStatusCodesToTypedErrors(t *testing.T) {

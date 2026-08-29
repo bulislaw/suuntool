@@ -47,6 +47,7 @@ delete/uncomment/unreact.`,
 			AllowDestructive: flagMCPAllowDestructive,
 			BaseURL:          baseURL(),
 			Timeout:          pickTimeout(),
+			Verbose:          flagVerbose,
 		})
 	},
 }

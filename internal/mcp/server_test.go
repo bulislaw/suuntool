@@ -1,11 +1,15 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"testing"
 	"time"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/stretchr/testify/require"
+
+	"github.com/tajchert/suuntool/internal/metrics"
 )
 
 // TestServer_ListsDoctorTool spins up Run() against an in-memory transport
@@ -48,4 +52,10 @@ func TestServer_ListsDoctorTool(t *testing.T) {
 	if !found {
 		t.Fatalf("doctor tool not listed; got %d tools", len(res.Tools))
 	}
+}
+
+func TestWriteMCPMetrics(t *testing.T) {
+	var out bytes.Buffer
+	writeMCPMetrics(&out, "workouts_sml", metrics.Snapshot{ServerRequests: 1, CacheHits: 2})
+	require.Equal(t, "suuntool mcp workouts_sml: server requests=1, cache hits=2\n", out.String())
 }

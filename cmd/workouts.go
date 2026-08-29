@@ -16,6 +16,7 @@ import (
 	"github.com/tajchert/suuntool/internal/api"
 	"github.com/tajchert/suuntool/internal/api/endpoints"
 	"github.com/tajchert/suuntool/internal/auth"
+	"github.com/tajchert/suuntool/internal/cache"
 	"github.com/tajchert/suuntool/internal/output"
 	"github.com/tajchert/suuntool/internal/session"
 )
@@ -350,14 +351,16 @@ piping stdout.`,
 	Example: `  suuntool workouts sml wk1 -o wk1.sml.json
   suuntool workouts sml wk1 | jq '.Data.Samples | length'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
 		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
 		defer cancel()
 
-		rc, err := endpoints.FetchSML(ctx, c, args[0])
+		rc, err := cachedArtifact(ctx, sess, cache.WorkoutSML, args[0], func() (io.ReadCloser, error) {
+			return endpoints.FetchSML(ctx, c, args[0])
+		})
 		if err != nil {
 			return err
 		}
@@ -378,17 +381,19 @@ var workoutsFITCmd = &cobra.Command{
 	Short: "Download the binary .fit export for a workout",
 	Long: `Download the binary .fit export for a workout from /v1/workout/exportFit/{key}.
 Returns a binary .fit file. Use -o to save; piping to stdout is binary-unsafe on some terminals.`,
-	Args: cobra.ExactArgs(1),
+	Args:    cobra.ExactArgs(1),
 	Example: `  suuntool workouts fit wk1 -o wk1.fit`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
 		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
 		defer cancel()
 
-		rc, err := endpoints.FetchFIT(ctx, c, args[0])
+		rc, err := cachedArtifact(ctx, sess, cache.WorkoutFIT, args[0], func() (io.ReadCloser, error) {
+			return endpoints.FetchFIT(ctx, c, args[0])
+		})
 		if err != nil {
 			return err
 		}
@@ -554,7 +559,7 @@ by the server — refer to handoff §6.4 if you see a 5xx.`,
 		if err != nil {
 			return err
 		}
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
@@ -564,6 +569,7 @@ by the server — refer to handoff §6.4 if you see a 5xx.`,
 		if err != nil {
 			return err
 		}
+		invalidateWorkoutArtifacts(sess, args[0])
 		return emit(raw)
 	},
 	Example: `  suuntool workouts edit wk_abc123 --set totalAscent=120
@@ -639,7 +645,7 @@ Example entries file:
 				return &api.Error{Code: "USAGE", Message: fmt.Sprintf("entry %d missing \"key\"", i), Exit: ExitUsage}
 			}
 		}
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
@@ -648,6 +654,11 @@ Example entries file:
 		raw, err := endpoints.BatchUpdate(ctx, c, entries)
 		if err != nil {
 			return err
+		}
+		for _, entry := range entries {
+			if key, ok := entry["key"].(string); ok {
+				invalidateWorkoutArtifacts(sess, key)
+			}
 		}
 		return emit(raw)
 	},
@@ -839,7 +850,7 @@ Server endpoint: DELETE /v1/workouts/{key}/delete  (note trailing /delete).`,
 			}
 			return nil
 		}
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
@@ -848,6 +859,7 @@ Server endpoint: DELETE /v1/workouts/{key}/delete  (note trailing /delete).`,
 		if err := endpoints.DeleteWorkout(ctx, c, key); err != nil {
 			return err
 		}
+		invalidateWorkoutArtifacts(sess, key)
 		if !flagQuiet {
 			fmt.Fprintln(os.Stderr, "Deleted workout", key)
 		}
@@ -873,7 +885,7 @@ var (
 type exportSummary struct {
 	Key      string            `json:"key"`
 	Bundle   string            `json:"bundle"`
-	Files    map[string]string `json:"files"`            // logical name -> absolute path
+	Files    map[string]string `json:"files"` // logical name -> absolute path
 	Skipped  []string          `json:"skipped,omitempty"`
 	Failures map[string]string `json:"failures,omitempty"` // logical name -> error string
 }
@@ -942,7 +954,7 @@ to write into a non-empty directory — pass --force to overwrite.`,
 			return err
 		}
 
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
@@ -980,7 +992,9 @@ to write into a non-empty directory — pass --force to overwrite.`,
 		} else {
 			path := filepath.Join(dir, "workout.sml.json")
 			if err := streamToFile(cmd.Context(), path, func(ctx context.Context) (io.ReadCloser, error) {
-				return endpoints.FetchSML(ctx, c, key)
+				return cachedArtifact(ctx, sess, cache.WorkoutSML, key, func() (io.ReadCloser, error) {
+					return endpoints.FetchSML(ctx, c, key)
+				})
 			}); err != nil {
 				summary.Failures["sml"] = err.Error()
 				logf("  sml        FAILED: %s\n", err)
@@ -996,7 +1010,9 @@ to write into a non-empty directory — pass --force to overwrite.`,
 		} else {
 			path := filepath.Join(dir, "workout.fit")
 			if err := streamToFile(cmd.Context(), path, func(ctx context.Context) (io.ReadCloser, error) {
-				return endpoints.FetchFIT(ctx, c, key)
+				return cachedArtifact(ctx, sess, cache.WorkoutFIT, key, func() (io.ReadCloser, error) {
+					return endpoints.FetchFIT(ctx, c, key)
+				})
 			}); err != nil {
 				summary.Failures["fit"] = err.Error()
 				logf("  fit        FAILED: %s\n", err)

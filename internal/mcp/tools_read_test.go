@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,8 +13,10 @@ import (
 	"time"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/tajchert/suuntool/internal/api"
+	"github.com/tajchert/suuntool/internal/cache"
 	"github.com/tajchert/suuntool/internal/session"
 )
 
@@ -28,6 +31,12 @@ func startTestServer(t *testing.T, baseURL string, timelineURL string, sess *ses
 // startTestServerGated is like startTestServer but lets the caller decide
 // which tool tiers to expose. Used by the destructive-gating test.
 func startTestServerGated(t *testing.T, baseURL string, timelineURL string, sess *session.Session, allowWrite, allowDestructive bool) *sdkmcp.ClientSession {
+	return startTestServerConfigured(t, baseURL, timelineURL, sess, allowWrite, allowDestructive, false, nil)
+}
+
+// startTestServerConfigured is the configurable test-server constructor used
+// when a test needs to observe MCP-level behavior such as verbose output.
+func startTestServerConfigured(t *testing.T, baseURL string, timelineURL string, sess *session.Session, allowWrite, allowDestructive, verbose bool, logWriter io.Writer) *sdkmcp.ClientSession {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
@@ -43,9 +52,14 @@ func startTestServerGated(t *testing.T, baseURL string, timelineURL string, sess
 	} else {
 		tl = api.NewClient(baseURL, sk, time.Second)
 	}
-	d := &deps{client: cl, timelineClient: tl, session: sess}
+	store, err := cache.NewAt(t.TempDir(), sess)
+	if err != nil {
+		t.Fatalf("new cache store: %v", err)
+	}
+	d := &deps{client: cl, timelineClient: tl, session: sess, cache: store, verbose: verbose, logWriter: logWriter}
 
 	srv := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "suuntool", Version: "0"}, nil)
+	registerVerboseMetrics(srv, d)
 	registerAll(srv, d, allowWrite, allowDestructive)
 
 	clientT, serverT := sdkmcp.NewInMemoryTransports()
@@ -223,6 +237,47 @@ func TestTool_WorkoutsGet(t *testing.T) {
 	if _, ok := sc["extensions"]; !ok {
 		t.Fatal("expected extensions in detail response")
 	}
+}
+
+func TestTool_WorkoutsSML_UsesCacheOnSecondRead(t *testing.T) {
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/workouts/w1/sml" {
+			t.Fatalf("path %s", r.URL.Path)
+		}
+		requests++
+		_, _ = w.Write([]byte(`{"Data":{"Samples":[{"TimeISO8601":"2026-01-01T00:00:00Z","Sample":{"HR":120}}]}}`))
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+
+	first := callTool(t, cs, "workouts_sml", map[string]any{"key": "w1", "streams": []string{"HR"}})
+	mustOK(t, first)
+	second := callTool(t, cs, "workouts_sml", map[string]any{"key": "w1", "streams": []string{"HR"}})
+	mustOK(t, second)
+	require.Equal(t, 1, requests)
+	require.Equal(t, first.StructuredContent, second.StructuredContent)
+}
+
+func TestTool_WorkoutsSML_VerboseMetricsArePerCall(t *testing.T) {
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/workouts/w1/sml" {
+			t.Fatalf("path %s", r.URL.Path)
+		}
+		requests++
+		_, _ = w.Write([]byte(`{"Data":{"Samples":[{"TimeISO8601":"2026-01-01T00:00:00Z","Sample":{"HR":120}}]}}`))
+	}))
+	defer srv.Close()
+
+	var logs bytes.Buffer
+	cs := startTestServerConfigured(t, srv.URL+"/v1/", "", authSession(), true, true, true, &logs)
+	mustOK(t, callTool(t, cs, "workouts_sml", map[string]any{"key": "w1", "streams": []string{"HR"}}))
+	mustOK(t, callTool(t, cs, "workouts_sml", map[string]any{"key": "w1", "streams": []string{"HR"}}))
+
+	require.Equal(t, 1, requests)
+	require.Equal(t, "suuntool mcp workouts_sml: server requests=1, cache hits=0\n"+
+		"suuntool mcp workouts_sml: server requests=0, cache hits=1\n", logs.String())
 }
 
 func TestTool_WorkoutsCount(t *testing.T) {

@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	flagLoginEmail        string
+	flagLoginEmail         string
 	flagLoginPasswordStdin bool
 )
 
@@ -36,7 +36,7 @@ Password input:
     echo "hunter2" | suuntool login --email user@example.com --password-stdin
     cat pass.txt   | suuntool login --email user@example.com --password-stdin`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, cancel := context.WithTimeout(context.Background(), pickTimeout())
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
 		defer cancel()
 
 		var pwd string

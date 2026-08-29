@@ -41,6 +41,7 @@ func destructiveRegistrars() []toolRegistrar {
 				if err := endpoints.DeleteWorkout(ctx, d.client, a.Key); err != nil {
 					return mapErrorToCallToolResult(err), nil, nil
 				}
+				invalidateWorkoutArtifacts(d, a.Key)
 				return nil, map[string]any{"ok": true, "key": a.Key}, nil
 			})
 		},
@@ -89,6 +90,7 @@ func destructiveRegistrars() []toolRegistrar {
 				if err := endpoints.DeleteGuide(ctx, d.client, a.ID); err != nil {
 					return mapErrorToCallToolResult(err), nil, nil
 				}
+				invalidateGuideArchive(d, a.ID)
 				return nil, map[string]any{"ok": true, "id": a.ID}, nil
 			})
 		},

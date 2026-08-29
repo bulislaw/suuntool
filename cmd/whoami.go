@@ -17,7 +17,7 @@ var whoamiCmd = &cobra.Command{
 			return err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), pickTimeout())
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
 		defer cancel()
 
 		u, err := endpoints.Whoami(ctx, c)

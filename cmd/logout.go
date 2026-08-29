@@ -25,7 +25,7 @@ var logoutCmd = &cobra.Command{
 			return err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), pickTimeout())
+		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
 		defer cancel()
 
 		if err := endpoints.Logout(ctx, baseURL(), s.SessionKey); err != nil {

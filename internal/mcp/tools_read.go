@@ -11,6 +11,7 @@ import (
 
 	"github.com/tajchert/suuntool/internal/api"
 	"github.com/tajchert/suuntool/internal/api/endpoints"
+	"github.com/tajchert/suuntool/internal/cache"
 )
 
 // emptyArgs is the shared no-input args struct.
@@ -313,7 +314,9 @@ func readRegistrars() []toolRegistrar {
 				if e := authGate(d); e != nil {
 					return e, nil, nil
 				}
-				rc, err := endpoints.FetchSML(ctx, d.client, args.Key)
+				rc, err := cachedArtifact(ctx, d, cache.WorkoutSML, args.Key, func() (io.ReadCloser, error) {
+					return endpoints.FetchSML(ctx, d.client, args.Key)
+				})
 				if err != nil {
 					return mapErrorToCallToolResult(err), nil, nil
 				}
@@ -343,7 +346,9 @@ func readRegistrars() []toolRegistrar {
 				if e := authGate(d); e != nil {
 					return e, nil, nil
 				}
-				rc, err := endpoints.FetchFIT(ctx, d.client, args.Key)
+				rc, err := cachedArtifact(ctx, d, cache.WorkoutFIT, args.Key, func() (io.ReadCloser, error) {
+					return endpoints.FetchFIT(ctx, d.client, args.Key)
+				})
 				if err != nil {
 					return mapErrorToCallToolResult(err), nil, nil
 				}
@@ -408,7 +413,9 @@ func readRegistrars() []toolRegistrar {
 				if e := authGate(d); e != nil {
 					return e, nil, nil
 				}
-				rc, err := endpoints.DownloadGuide(ctx, d.client, a.ID)
+				rc, err := cachedArtifact(ctx, d, cache.GuideArchive, a.ID, func() (io.ReadCloser, error) {
+					return endpoints.DownloadGuide(ctx, d.client, a.ID)
+				})
 				if err != nil {
 					return mapErrorToCallToolResult(err), nil, nil
 				}

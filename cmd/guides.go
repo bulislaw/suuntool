@@ -3,12 +3,14 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/tajchert/suuntool/internal/api"
 	"github.com/tajchert/suuntool/internal/api/endpoints"
+	"github.com/tajchert/suuntool/internal/cache"
 	"github.com/tajchert/suuntool/internal/output"
 )
 
@@ -63,13 +65,15 @@ archive, not identical bytes.`,
 	Args:    cobra.ExactArgs(1),
 	Example: `  suuntool guides download g1 -o g1.zip`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
 		ctx, cancel := context.WithTimeout(cmd.Context(), pickTimeout())
 		defer cancel()
-		rc, err := endpoints.DownloadGuide(ctx, c, args[0])
+		rc, err := cachedArtifact(ctx, sess, cache.GuideArchive, args[0], func() (io.ReadCloser, error) {
+			return endpoints.DownloadGuide(ctx, c, args[0])
+		})
 		if err != nil {
 			return err
 		}
@@ -130,7 +134,7 @@ Content only -- this does not change pinned status.`,
 	Args:    cobra.ExactArgs(2),
 	Example: `  suuntool guides update g1 ./workout-v2.zip`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
@@ -146,6 +150,7 @@ Content only -- this does not change pinned status.`,
 		if err != nil {
 			return err
 		}
+		invalidateGuideArchive(sess, args[0])
 		if !flagQuiet {
 			fmt.Fprintf(os.Stderr, "Updated guide id=%s\n", g.ID)
 		}
@@ -243,7 +248,7 @@ Server endpoint: DELETE /v1/suuntoplus/guides/files/{id}.`,
 			}
 			return nil
 		}
-		c, _, err := authedClient()
+		c, sess, err := authedClient()
 		if err != nil {
 			return err
 		}
@@ -252,6 +257,7 @@ Server endpoint: DELETE /v1/suuntoplus/guides/files/{id}.`,
 		if err := endpoints.DeleteGuide(ctx, c, id); err != nil {
 			return err
 		}
+		invalidateGuideArchive(sess, id)
 		if !flagQuiet {
 			fmt.Fprintln(os.Stderr, "Deleted guide", id)
 		}

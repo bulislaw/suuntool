@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"net"
+
+	"github.com/tajchert/suuntool/internal/metrics"
 )
 
 // multiCloser wraps a primary reader and closes both the inner reader (e.g. gzip)
@@ -44,6 +46,7 @@ func (c *Client) DoStream(ctx context.Context, method, path string, body io.Read
 		return nil, err
 	}
 
+	metrics.FromContext(ctx).RecordServerRequest()
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		var nerr net.Error

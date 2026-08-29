@@ -263,7 +263,8 @@ The model should call `workouts_list` with `limit: 3` and return rows with both 
 | `-o, --output <path>` | Write to a file instead of stdout — format inferred from extension (`.json`, `.tsv`) |
 | `--fields a,b,c` | Project list/object output to just these JSON keys before render (forces JSON). Skips piping through `jq` for trivial selection |
 | `--no-color` | Disable ANSI styling (also honors `NO_COLOR`) |
-| `--quiet`, `--verbose` | Tune log verbosity on stderr |
+| `--quiet` | Suppress non-error status logs on stderr |
+| `--verbose`, `-v` | Print server-request and cache-hit diagnostics to stderr (per tool call in MCP mode) |
 | `--timeout <dur>` | HTTP timeout, e.g. `45s` |
 
 ```bash
@@ -271,6 +272,28 @@ suuntool profile settings -o settings.json          # save to file
 suuntool whoami --format json | jq .username        # pipe into jq
 NO_COLOR=1 suuntool whoami                          # plain-text TTY
 ```
+
+## Local cache
+
+suuntool automatically and permanently caches full workout SML files, FIT
+exports, and downloaded SuuntoPlus guide archives. The cache is local to this
+machine, has no size limit or expiry, and is isolated per logged-in account.
+It never caches workout lists, metadata, wellness, profile data, comments, or
+stats, so normal reads always show the server's current data.
+
+```bash
+suuntool cache status     # current account's cached artifact counts and size
+suuntool cache clear      # remove only the current account's cached artifacts
+suuntool -v workouts sml wk_abc123 -o wk.sml.json
+# suuntool: server requests=0, cache hits=1
+```
+
+Cached SML, FIT, and guide downloads are reused until you clear the cache or
+change that resource through suuntool. A change made outside suuntool can leave
+one of those saved raw downloads stale; use `suuntool cache clear` before
+downloading it again when that matters. Cache and request diagnostics always go
+to stderr: normal commands print one `-v` summary, while `suuntool -v mcp`
+prints one summary for each MCP tool call without affecting MCP stdout.
 
 ## Commands
 
@@ -365,6 +388,8 @@ Guides are the structured-workout archives the watch follows. suuntool moves the
 |---------|----------|------|-------|
 | `endpoints` | — | no | Stable command → method/path table for agents (`--format json`) |
 | `version` | — | no | Build version |
+| `cache status` | — | saved session | Current account's local artifact-cache usage; makes no server request |
+| `cache clear` | — | saved session | Removes only the current account's local cached artifacts; makes no server request |
 
 Run `suuntool <command> --help` for the full reference of any command. The mapping above is also available as a JSON document via `suuntool endpoints --format json`.
 

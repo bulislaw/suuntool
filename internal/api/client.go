@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/tajchert/suuntool/internal/auth"
+	"github.com/tajchert/suuntool/internal/metrics"
 )
 
 const DefaultBaseURL = "https://api.sports-tracker.com/apiserver/v1/"
@@ -77,6 +78,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body io.Reader, he
 	if err != nil {
 		return nil, err
 	}
+	metrics.FromContext(ctx).RecordServerRequest()
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		var nerr net.Error

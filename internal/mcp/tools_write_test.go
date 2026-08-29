@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestTool_WorkoutsComment exercises POST /v1/workouts/comment/{key} and asserts
@@ -71,6 +73,41 @@ func TestTool_WorkoutsEdit(t *testing.T) {
 	}))
 }
 
+func TestTool_WorkoutsEdit_InvalidatesCachedArtifacts(t *testing.T) {
+	requests := map[string]int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests[r.Method+" "+r.URL.Path]++
+		switch r.Method + " " + r.URL.Path {
+		case "GET /v1/workouts/w1/sml":
+			_, _ = w.Write([]byte(`{"Data":{"Samples":[]}}`))
+		case "GET /v1/workout/exportFit/w1":
+			_, _ = w.Write([]byte("fit-bytes"))
+		case "PUT /v1/workouts/w1/attributes":
+			_, _ = w.Write([]byte(`{"payload":{"key":"w1","description":"new"},"error":null,"metadata":null}`))
+		default:
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+
+	for _, tool := range []string{"workouts_sml", "workouts_fit"} {
+		mustOK(t, callTool(t, cs, tool, map[string]any{"key": "w1"}))
+		mustOK(t, callTool(t, cs, tool, map[string]any{"key": "w1"}))
+	}
+	mustOK(t, callTool(t, cs, "workouts_edit", map[string]any{
+		"key":   "w1",
+		"patch": map[string]any{"description": "new"},
+	}))
+	for _, tool := range []string{"workouts_sml", "workouts_fit"} {
+		mustOK(t, callTool(t, cs, tool, map[string]any{"key": "w1"}))
+	}
+
+	require.Equal(t, 2, requests["GET /v1/workouts/w1/sml"])
+	require.Equal(t, 2, requests["GET /v1/workout/exportFit/w1"])
+	require.Equal(t, 1, requests["PUT /v1/workouts/w1/attributes"])
+}
+
 func TestTool_WorkoutsBatchUpdate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" || r.URL.Path != "/v1/workouts/batchUpdate" {
@@ -88,6 +125,33 @@ func TestTool_WorkoutsBatchUpdate(t *testing.T) {
 	mustOK(t, callTool(t, cs, "workouts_batch_update", map[string]any{
 		"entries": []any{map[string]any{"key": "w1", "description": "x"}},
 	}))
+}
+
+func TestTool_WorkoutsBatchUpdate_InvalidatesCachedArtifacts(t *testing.T) {
+	requests := map[string]int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests[r.Method+" "+r.URL.Path]++
+		switch r.Method + " " + r.URL.Path {
+		case "GET /v1/workouts/w1/sml":
+			_, _ = w.Write([]byte(`{"Data":{"Samples":[]}}`))
+		case "POST /v1/workouts/batchUpdate":
+			_, _ = w.Write([]byte(`{"payload":[{"key":"w1","ok":true}],"error":null,"metadata":null}`))
+		default:
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+
+	mustOK(t, callTool(t, cs, "workouts_sml", map[string]any{"key": "w1"}))
+	mustOK(t, callTool(t, cs, "workouts_sml", map[string]any{"key": "w1"}))
+	mustOK(t, callTool(t, cs, "workouts_batch_update", map[string]any{
+		"entries": []any{map[string]any{"key": "w1", "description": "new"}},
+	}))
+	mustOK(t, callTool(t, cs, "workouts_sml", map[string]any{"key": "w1"}))
+
+	require.Equal(t, 2, requests["GET /v1/workouts/w1/sml"])
+	require.Equal(t, 1, requests["POST /v1/workouts/batchUpdate"])
 }
 
 func TestTool_WorkoutsShare(t *testing.T) {
@@ -219,6 +283,35 @@ func TestTool_GuidesUpdate(t *testing.T) {
 	mustOK(t, res)
 }
 
+func TestTool_GuidesUpdate_InvalidatesCachedArchive(t *testing.T) {
+	requests := map[string]int{}
+	zipBytes := []byte("PK\x03\x04updated-content")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests[r.Method+" "+r.URL.Path]++
+		switch r.Method + " " + r.URL.Path {
+		case "GET /v1/suuntoplus/guides/files/g1":
+			_, _ = w.Write([]byte("PK\x03\x04cached-guide"))
+		case "PUT /v1/suuntoplus/guides/files/g1":
+			_, _ = w.Write([]byte(`{"payload":{"id":"g1"},"error":null,"metadata":null}`))
+		default:
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+
+	mustOK(t, callTool(t, cs, "guides_download", map[string]any{"id": "g1"}))
+	mustOK(t, callTool(t, cs, "guides_download", map[string]any{"id": "g1"}))
+	mustOK(t, callTool(t, cs, "guides_update", map[string]any{
+		"id":         "g1",
+		"zip_base64": base64.StdEncoding.EncodeToString(zipBytes),
+	}))
+	mustOK(t, callTool(t, cs, "guides_download", map[string]any{"id": "g1"}))
+
+	require.Equal(t, 2, requests["GET /v1/suuntoplus/guides/files/g1"])
+	require.Equal(t, 1, requests["PUT /v1/suuntoplus/guides/files/g1"])
+}
+
 func TestTool_GuidesPin(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PATCH" || r.URL.Path != "/v1/suuntoplus/guides/items/g1" {
@@ -269,6 +362,38 @@ func TestTool_WorkoutsDelete(t *testing.T) {
 	}
 }
 
+func TestTool_WorkoutsDelete_InvalidatesCachedArtifacts(t *testing.T) {
+	requests := map[string]int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests[r.Method+" "+r.URL.Path]++
+		switch r.Method + " " + r.URL.Path {
+		case "GET /v1/workouts/w1/sml":
+			_, _ = w.Write([]byte(`{"Data":{"Samples":[]}}`))
+		case "GET /v1/workout/exportFit/w1":
+			_, _ = w.Write([]byte("fit-bytes"))
+		case "DELETE /v1/workouts/w1/delete":
+			_, _ = w.Write([]byte(`{"payload":null,"error":null,"metadata":null}`))
+		default:
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+
+	for _, tool := range []string{"workouts_sml", "workouts_fit"} {
+		mustOK(t, callTool(t, cs, tool, map[string]any{"key": "w1"}))
+		mustOK(t, callTool(t, cs, tool, map[string]any{"key": "w1"}))
+	}
+	mustOK(t, callTool(t, cs, "workouts_delete", map[string]any{"key": "w1"}))
+	for _, tool := range []string{"workouts_sml", "workouts_fit"} {
+		mustOK(t, callTool(t, cs, tool, map[string]any{"key": "w1"}))
+	}
+
+	require.Equal(t, 2, requests["GET /v1/workouts/w1/sml"])
+	require.Equal(t, 2, requests["GET /v1/workout/exportFit/w1"])
+	require.Equal(t, 1, requests["DELETE /v1/workouts/w1/delete"])
+}
+
 func TestTool_WorkoutsUncomment(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "DELETE" || r.URL.Path != "/v1/workouts/comment/c1" {
@@ -308,6 +433,31 @@ func TestTool_GuidesDelete(t *testing.T) {
 	if sc["ok"] != true || sc["id"] != "g1" {
 		t.Fatalf("payload: %+v", sc)
 	}
+}
+
+func TestTool_GuidesDelete_InvalidatesCachedArchive(t *testing.T) {
+	requests := map[string]int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests[r.Method+" "+r.URL.Path]++
+		switch r.Method + " " + r.URL.Path {
+		case "GET /v1/suuntoplus/guides/files/g1":
+			_, _ = w.Write([]byte("PK\x03\x04cached-guide"))
+		case "DELETE /v1/suuntoplus/guides/files/g1":
+			w.WriteHeader(http.StatusOK)
+		default:
+			t.Fatalf("unexpected: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	cs := startTestServer(t, srv.URL+"/v1/", "", authSession())
+
+	mustOK(t, callTool(t, cs, "guides_download", map[string]any{"id": "g1"}))
+	mustOK(t, callTool(t, cs, "guides_download", map[string]any{"id": "g1"}))
+	mustOK(t, callTool(t, cs, "guides_delete", map[string]any{"id": "g1"}))
+	mustOK(t, callTool(t, cs, "guides_download", map[string]any{"id": "g1"}))
+
+	require.Equal(t, 2, requests["GET /v1/suuntoplus/guides/files/g1"])
+	require.Equal(t, 1, requests["DELETE /v1/suuntoplus/guides/files/g1"])
 }
 
 // TestDestructive_Gating verifies that when allowDestructive=false the

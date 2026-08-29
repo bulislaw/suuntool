@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -13,6 +15,8 @@ import (
 	"golang.org/x/term"
 
 	"github.com/tajchert/suuntool/internal/api"
+	"github.com/tajchert/suuntool/internal/cache"
+	"github.com/tajchert/suuntool/internal/metrics"
 	"github.com/tajchert/suuntool/internal/output"
 	"github.com/tajchert/suuntool/internal/session"
 )
@@ -40,6 +44,8 @@ var (
 	flagFields  []string
 )
 
+var openCacheStore = cache.New
+
 var rootCmd = &cobra.Command{
 	Use:   "suuntool",
 	Short: "Unofficial CLI for the Suunto / Sports-Tracker API",
@@ -57,10 +63,25 @@ Exit codes:
   5 server   6 not-found   7 forbidden`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Cobra child commands do not inherit the root command's context, so
+		// attach counters at the executed command boundary.
+		if metrics.FromContext(cmd.Context()) == nil {
+			cmd.SetContext(metrics.WithCounters(cmd.Context(), metrics.New()))
+		}
+	},
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	executed, err := rootCmd.ExecuteC()
+	if flagVerbose && (executed == nil || executed.Name() != "mcp") {
+		var s metrics.Snapshot
+		if executed != nil {
+			s = metrics.FromContext(executed.Context()).Snapshot()
+		}
+		fmt.Fprintf(os.Stderr, "suuntool: server requests=%d, cache hits=%d\n", s.ServerRequests, s.CacheHits)
+	}
+	if err != nil {
 		code := ExitGeneric
 		if c, ok := err.(interface{ ExitCode() int }); ok {
 			code = c.ExitCode()
@@ -112,6 +133,35 @@ func authedClient() (*api.Client, *session.Session, error) {
 	}
 	c := api.NewClient(baseURL(), s.SessionKey, flagTimeout)
 	return c, s, nil
+}
+
+// cachedArtifact serves one lossless download from the per-account cache when
+// available. Cache setup failures deliberately degrade to a normal network
+// request: local caching must never hide usable server data.
+func cachedArtifact(ctx context.Context, s *session.Session, kind cache.Kind, id string, fetch func() (io.ReadCloser, error)) (io.ReadCloser, error) {
+	store, err := openCacheStore(s)
+	if err != nil {
+		store = nil
+	}
+	return cache.Cached(ctx, store, kind, id, fetch)
+}
+
+// invalidateWorkoutArtifacts is best effort. A failure here must not turn a
+// successfully applied server-side edit into a failed command.
+func invalidateWorkoutArtifacts(s *session.Session, key string) {
+	store, err := openCacheStore(s)
+	if err != nil {
+		return
+	}
+	_ = store.Remove(cache.WorkoutSML, key)
+	_ = store.Remove(cache.WorkoutFIT, key)
+}
+
+func invalidateGuideArchive(s *session.Session, id string) {
+	store, err := openCacheStore(s)
+	if err == nil {
+		_ = store.Remove(cache.GuideArchive, id)
+	}
 }
 
 // renderOpts builds output.Opts from current flags.

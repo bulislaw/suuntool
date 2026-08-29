@@ -132,6 +132,7 @@ func writeRegistrars() []toolRegistrar {
 				if err != nil {
 					return mapErrorToCallToolResult(err), nil, nil
 				}
+				invalidateWorkoutArtifacts(d, a.Key)
 				return nil, map[string]any{"key": a.Key, "payload": v}, nil
 			})
 		},
@@ -148,6 +149,11 @@ func writeRegistrars() []toolRegistrar {
 				v, err := endpoints.BatchUpdate(ctx, d.client, a.Entries)
 				if err != nil {
 					return mapErrorToCallToolResult(err), nil, nil
+				}
+				for _, entry := range a.Entries {
+					if key, ok := entry["key"].(string); ok {
+						invalidateWorkoutArtifacts(d, key)
+					}
 				}
 				return nil, map[string]any{"payload": v}, nil
 			})
@@ -317,6 +323,7 @@ func writeRegistrars() []toolRegistrar {
 				if err != nil {
 					return mapErrorToCallToolResult(err), nil, nil
 				}
+				invalidateGuideArchive(d, a.ID)
 				return nil, v, nil
 			})
 		},
