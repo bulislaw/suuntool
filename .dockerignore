@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+.idea
+.vscode
+.DS_Store
+dist
+suuntool
+coverage.out
+*.session.json
+**/session.json
+.env
+.env.*
+docs

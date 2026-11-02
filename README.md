@@ -130,7 +130,13 @@ suuntool logout
 
 ## MCP server
 
-`suuntool mcp` exposes every endpoint above as a [Model Context Protocol](https://modelcontextprotocol.io) tool over stdio. Point any MCP-capable client at it and an LLM can call Suunto endpoints directly with typed arguments — no shell scraping.
+**Raspberry Pi / NAS with Docker and Portainer:** see the
+[setup guide](docs/portainer.md). Point Portainer at this repository's
+`compose.yaml` to run an authenticated HTTP MCP service with persistent session
+and download cache storage. The Raspberry Pi builds the image from source;
+no application image registry is needed.
+
+`suuntool mcp` exposes every endpoint above as a [Model Context Protocol](https://modelcontextprotocol.io) tool over stdio by default. For a network service, use `suuntool mcp --listen :8080` with `SUUNTOOL_MCP_TOKEN` set; clients connect to `/mcp` using Streamable HTTP and an `Authorization: Bearer <token>` header. Point an MCP-capable client at it and an LLM can call Suunto endpoints directly with typed arguments — no shell scraping.
 
 ```bash
 suuntool login                                    # one-time; the MCP server cannot prompt for a password

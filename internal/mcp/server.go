@@ -16,8 +16,8 @@ import (
 )
 
 // Opts configures the MCP server. AllowWrite/AllowDestructive gate which
-// tool tiers get registered. Transport defaults to StdioTransport when nil
-// (production CLI). Tests pass an InMemoryTransport.
+// tool tiers get registered. Listen selects HTTP; otherwise Transport defaults
+// to StdioTransport. Tests can pass an InMemoryTransport.
 type Opts struct {
 	AllowWrite       bool
 	AllowDestructive bool
@@ -25,12 +25,29 @@ type Opts struct {
 	Timeout          time.Duration
 	Transport        sdkmcp.Transport
 	Verbose          bool
+	Listen           string
+	BearerToken      string
 }
 
 // Run starts the MCP server and blocks until the context is cancelled or the
-// transport closes. Session is loaded lazily; if absent, authenticated tools
+// transport closes. Session is loaded at startup; if absent, authenticated tools
 // surface AUTH_EXPIRED at call-time.
 func Run(ctx context.Context, o Opts) error {
+	if o.Listen != "" && o.BearerToken == "" {
+		return fmt.Errorf("HTTP MCP requires SUUNTOOL_MCP_TOKEN to be set")
+	}
+	s := newServer(o)
+	if o.Listen != "" {
+		return serveHTTP(ctx, o.Listen, newHTTPHandler(s, o.BearerToken))
+	}
+	t := o.Transport
+	if t == nil {
+		t = &sdkmcp.StdioTransport{}
+	}
+	return s.Run(ctx, t)
+}
+
+func newServer(o Opts) *sdkmcp.Server {
 	timeout := o.Timeout
 	if timeout == 0 {
 		timeout = 30 * time.Second
@@ -52,12 +69,7 @@ func Run(ctx context.Context, o Opts) error {
 	s := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "suuntool", Version: "0"}, nil)
 	registerVerboseMetrics(s, d)
 	registerAll(s, d, o.AllowWrite, o.AllowDestructive)
-
-	t := o.Transport
-	if t == nil {
-		t = &sdkmcp.StdioTransport{}
-	}
-	return s.Run(ctx, t)
+	return s
 }
 
 // registerVerboseMetrics keeps MCP stdout protocol-only while giving each tool

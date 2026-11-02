@@ -6,3 +6,6 @@ coverage.out
 .vscode/
 .DS_Store
 .claude/
+.env
+.env.*
+!.env.example
